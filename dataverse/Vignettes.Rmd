@@ -1,0 +1,598 @@
+---
+title: "Vignettes"
+author: "CheonGeunChoi"
+date: "2023-03-01"
+mainfont: NanumGothic
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+  pdf_document:
+    latex_engine: xelatex
+editor_options:
+  chunk_output_type: inlines
+---
+
+# 1. A Quick Overview(비네트 고정법)
+
+![Fig](nihms258919f1.jpg)
+
+
+This section assumes that you have already have anchors installed and want a quick introduction/overview. Information on installation, background, and examples of anchors are provide in detail in subsequent sections. All examples and objects described in this document assume that you have loaded the package in an R session,
+
+```{r}
+# install.packages("anchors_3.0-8.tar.gz", repos = NULL, type = "source")
+library(anchors)
+```
+A list of the functions and datasets with help pages can be found using,
+
+```{r}
+help(package="anchors")
+```
+
+For a list of demonstrations of functions, uses of data, and replications of published
+results,
+
+```{r}
+demo(package="anchors")
+```
+The function anchors() has two method= options
+
+* B non-parametric rank method from Wand (2007a)
+* C non-parametric rank method from King et al. (2004) and King and Wand (2007)
+* There are two other key supporting functions that will be discussed in turn:
+anchors.order() and chopit()
+
+For methods B and C, one can also specify that all combinations of subsets of
+vignettes (but retaining the same relative order as submitted in the formula) be analyzed using the option anchors(..., combn=TRUE). The default is combn=FALSE since for more than three vignettes, the process requires non-trivial computational time. Details can be found in the later section on vignette selection, and via help(anchors.combn).
+
+Datasets with anchoring vignettes that are made available by the anchors package include
+
+* chopitsim Simulated Data for test chopit function
+* mexchn China-Mexico political efficacy data
+* poleff Simulated Political Efficacy Data
+* poleffna Simulated Political Efficacy Data with NA (demo only, don't use)
+* freedom Individual freedom of speech data
+* sleep Sleep data for china
+* selfcare Self-care data for china
+* table1 Reference from Table 1 of King and Wand (2007)
+* table1src Specific response values that have inequalities to create table1
+
+Any of these can be loaded with data(), for example,
+
+```{r}
+data(freedom)
+```
+
+* Description: Selection of individual-level survey data for freedom of speech.
+
+* sage: data(freedom)
+
+* Details: A table with 3,500 observations and 12 variables.
+
+* sex1 for men and 0 for women
+
+* ageAge of respondent in years
+
+* educLevels of education, coded as a numeric variable with
+
+    + 1No formal education
+
+    + 2Less than primary school education
+
+    + 3Completed primary school
+
+    + 4Completed secondary school
+
+    + 5Completed high school
+
+    + 6Completed college
+
+    + 7Completed post-graduate degree
+
+* countryCharacter strings consisting of "Oceana", "Eurasia", and "Eastasia", after Orwell's 1984.
+
+* selfSelf assessment (see below).
+
+* vign1-vign6Response to vignettes (see below).
+
+Survey respondents were asked in almost the same language for a self-assessment and for an assessment of several hypothetical persons described by written vignettes. The self assessment (self, in the data set), "How free do you think [name/you] [is/are] to express [him-her/your]self without fear of government reprisal?" was first asked of the survey respondent with respect to him or herself, and then after each of vignette. The possible response categories are:
+
+* 1Completely free
+
+* 2Very free
+
+* 3Moderately free
+
+* 4Slightly free
+
+* 5Not free at all
+
+The vignettes, ordered from most free to least free, are:
+
+* vign1[Kay] does not like many of the government's policies. She frequently publishes her opinion in newspapers, criticizing decisions by officials and calling for change. She sees little reason these actions could lead to government reprisal.
+
+* vign2[Michael] disagrees with many of the government's policies. Though he knows criticism is frowned upon, he doesn't believe the government would punish someone for expressing critical views. He makes his opinion known on most issues without regard to who is listening.
+
+* vign3[Bob] has political views at odds with the government. He has heard of people occasionally being arrested for speaking out against the government, and government leaders sometimes make political speeches condemning those who criticize. He sometimes writes letters to newspapers about politics, but he is careful not to use his real name.
+
+* vign4[Connie] does not like the government's stance on many issues. She has a friend who was arrested for being too openly critical of governmental leaders, and so she avoids voicing her opinions in public places.
+
+* vign5[Vito] disagrees with many of the government's policies, and is very careful about whom he says this to, reserving his real opinions for family and close friends only. He knows several men who have been taken away by government officials for saying negative things in public.
+
+* vign6[Sonny] lives in fear of being harassed for his political views. Everyone he knows who has spoken out against the government has been arrested or taken away. He never says a word about anything the government does, not even when he is at home alone with his family.
+
+Demonstration files are available, both to provide examples of the use of functions and as an aid to those who would simply like to re-compute published results that have used versions of the anchors package, anchors.plot Demo of plotting with anchors
+
+* chopit Demo of chopit: summary, plot
+* anchors.freedom Wand et al (2007) rank analysis of freedom
+* anchors.freedom3 Wand et al (2007) Figure 2 histogram with 3 vignettes
+* anchors.freedom6 Wand et al (2007) Figure 1 histogram with 6 vignettes
+* anchors.vign2 King and Wand (2007) Table 1 anchors()
+* anchors.mexchn King and Wand (2007) Figure 1 histogram
+* entropy.mexchn King and Wand (2007) Figure 2 entropy()
+* entropy.sleep King and Wand (2007) Figure 3 entropy()
+* entropy.self King and Wand (2007) Figure 4 entropy()
+* anchors.mexchn2 Repl King et al (2004) Figure 2
+* chopit.mexchn King et al (2004) Table 2 (non-linear taus)
+
+Any of these can be invoked with demo(), for example,
+
+```{r}
+demo(anchors.freedom)
+```
+
+# 2. Introduction fo Anchoring Vignettes
+
+## 2.1. 개념
+
+* 비네트 고정법(anchoring vignette)은 응답자의 응답 편파(혹은 응답 편향, response bias)를 보정하기 위해서 King et al.(2004) 등에 의해 제안되었다. Likert형 측정문항에서 응답자는 개인의 속성에 따라서 문항 및 척도를 다르게 해석(혹은 이해)하여 응답할 수 있는데(김은나, 2015; Chevalier & Fielding, 2011), 비네트 고정법은 이러한 해석(혹은 이해)에 따른 응답의 차이를 보정하기 위한 기법 중 하나이다. 
+
+* 비네트 고정법에서는 측정 변인(예, 학습 동기)에 대한 전형적인 하/중/상 수준의 사례에 대한 응답자의 반응을 활용하여, 해당 변인과 관련된 측정문항에 대한 응답자의 응답 편파를 보정한다. 예컨대, [그림 1]은 학생들의 학습동기를 5개의 문항으로 측정할 때에 응답자들의 응답 편파를 보정하기 위해 제작된 하/중/상 수준의 비네트 문항들을 제시하고 있다(von Davier et al., 2018).
+
+
+![Fig4](fig4.png)
+
+[그림1] '학습동기'에 대한 비네트 문항 예시
+
+비네트 고정법의 적용 원리는 다음과 같다. [그림2]는 앞서 제시한 [그림1]의 예시에서 두 명의 응답자가 측정문항과 세 개의 사례에 대하여 어떻게 응답했는지 보여주고 있다. 측정문항에서 응답자 A와 응답자 B는 각각 동일한 점수 3에 체크하였지만, 비네트 문항에서는 가상의 같은 사례라도 응답자 B가 A보다 더 높은 점수를 부여한 것을 볼 수 있다. 즉, 같은 측정 변인에 대하여 응답자 A가 응답자 B보다 상대적으로 더 후한 점수를 부여한 것이다. 응답자 A는 측정문항에 대하여 중 수준의 사례와 같은 3점을 부여했지만 응답자 B는 상 수준의 사례와 같은 3점을 부여하였다. 즉, 비네트 문항의 반응 결과를 고려할 때, 해당 측정문항에 대한 응답자 B의 응답 점수 3점은 응답자 A의 응답 점수 3점보다 더 높은 수준으로 인식하고 있다고 해석할 수 있다. 따라서 비모수적 방법을 활용하여 조정점수를 산출하면(이에 대한 자세한 설명은 아래에 있다), A의 조정점수는 2가 되고, B의 조정점수는 6이 된다. 요컨대, 비네트 고정법은 이렇게 같은 측정문항에 대하여 다르게 해석하여 응답하는 두 응답자의 응답을 동등선상에서 비교하기 위하여 응답자의 응답 점수를 조절하는 기법이다.
+
+
+![Fig5](fig5.png)
+
+[그림 2] 비네트 고정법을 활용한 응답자 점수 비교 예시
+
+
+비네트 고정법이 적절하게 활용되려면 다음과 같은 가정을 만족시켜야 한다(King et al., 2004). 첫 번째 가정은 ‘응답 일관성(response consistency)’이며, 이는 응답자들이 측정문항과 비네트 문항에서 동일한 평가 기준을 적용하여 일관되게 응답해야 한다는 것이다. 두 번째 가정은 ‘비네트 동일성(vignette equivalence)’이며, 이는 모든 응답자들이 비네트 문항에 제시된 사례들에 대하여 특정 측정 변인에 관련한 사례로 동일하게 해석(혹은 이해)해야 한다는 것이다. 예컨대, 위 그림의 예시에서 응답자들은 비네트 문항들이 ‘학습동기’와 관련한 사례라고 공통적으로 해석해야 한다.
+
+
+
+Consider a survey question along with response categories that is asked as a self-assessment,
+
+ * How free do you think you are to express yourself without fear
+of government reprisal? (1) Completely Free, (2) Very Free, (3)
+Moderately Free, (4) Slightly Free, (5) Not Free at All
+
+One key difficulty of analyzing the results from such a survey question is the possibility that individuals apply different standards in the selection of a response category. Researchers have tried to ameliorate the problems of interpersonal and cross-cultural incomparability in survey research with careful question wording, translation (and back translation), focus groups, cognitive debriefing, and other techniques, most of which are designed to improve the survey question. In contrast, anchoring vignettes is a technique that seeks to bring additional data to bear on the problem.
+
+For example, vignettes corresponding to the above political freedom question attempt to describe hypothetical individuals who have different levels of freedom from government reprisal. The following six vignettes are intended to correspond to distinct levels of political freedom in order of decreasing freedom,
+
+* vign1[Kay] does not like many of the government's policies. She frequently publishes her opinion in newspapers, criticizing decisions by officials and calling for change. She sees little reason these actions could lead to government reprisal.
+
+* vign2[Michael] disagrees with many of the government's policies. Though he knows criticism is frowned upon, he doesn't believe the government would punish someone for expressing critical views. He makes his opinion known on most issues without regard to who is listening.
+
+* vign3[Bob] has political views at odds with the government. He has heard of people occasionally being arrested for speaking out against the government, and government leaders sometimes make political speeches condemning those who criticize. He sometimes writes letters to newspapers about politics, but he is careful not to use his real name.
+
+* vign4[Connie] does not like the government's stance on many issues. She has a friend who was arrested for being too openly critical of governmental leaders, and so she avoids voicing her opinions in public places.
+
+* vign5[Vito] disagrees with many of the government's policies, and is very careful about whom he says this to, reserving his real opinions for family and close friends only. He knows several men who have been taken away by government officials for saying negative things in public.
+
+* vign6[Sonny] lives in fear of being harassed for his political views. Everyone he knows who has spoken out against the government has been arrested or taken away. He never says a word about anything the government does, not even when he is at home alone with his family.
+
+After each of these vignettes, a corresponding evaluation question is asked with the same response categories as for the self-assessment.
+
+* How free do you think [name] is to express [him/her]self without
+fear of government reprisal? (1) Completely Free, (2) Very Free,
+(3) Moderately Free, (4) Slightly Free, (5) Not Free at All
+
+* Note: In the case where there are missing values for responses to the self-assessment or the vignettes, it is important that these be coded as '0' (zero), instead of NA or some other missing value if you wish to retain the other (non-missing) responses of an individual in the parametric model to be described shortly (see chopit). For all non-parametric analysis that rely on anchors or anchors.order, cases with missing responses (either NA or zero) must be listwise deleted. We pro-
+vide a handy function, replace.value, that facilitates the alteration of the coding of missing values for subsets of variables.
+
+
+# 3. Indexing Notation
+
+Our notation is a generalization of King et al. designed to accommodate our enhancements to the various models. We index survey questions, response categories, and respondents as follows:
+
+* We index survey questions by the pair ($s; j$), where question set $s (s =1, ..., S)$ corresponds to the self-assessment question number and refers to the set of questions that includes the self-assessment question (indicated by $j = 0$) and, optionally, one or more vignette questions (indicated by $j = 1, ..., J_s$).
+
+* We index response categories by $k (k = 1,..., K_s$) separately for each survey question since they can each have different response categories. Each set of questions (self-assessment and vignettes) must have the same number of choice categories (coded as increasing sequential integers starting with 1). Missing values (whether structural, because the question was not asked, or due to nonresponse) should be coded as k = 0.
+
+* We index respondents by $i$ or $l$. Respondent $i(i = 1, ..., n)$ is asked all of the self-assessment questions. Respondent $l(l = 1, ..., N)$ is asked all of the vignette questions. (Respondents are indexed for self-assessment and vignette questions separately since each could be asked of independent samples; if they are asked of the same individuals, then $i = l$ and $n = N$.) If your survey design asks each set of vignette questions in separate samples (and separate from the self-assessment question), then index each set of vignettes according to unique values of $l$ and use the missing value code (k = 0) for vignettes that are not asked of a subgroup; in other words, stack
+the data in block diagonal format. 
+
+Thus, every mathematical symbol in the model could be indexed by $s, j, k$, and either $i$ or $l$. In practice, we drop indexes that are constant.
+
+# 4. A Nonparametric Approach(조정점수 산출방법)
+
+## 4.1. Definition
+Define $C_{is}$ as the self-assessment relative to the corresponding set of vignettes. Let $y_i$ be the self-assessment response and $z_{i1}, ...,  z_{iJ}$ be the J vignette responses, for the $i$th respondent. For respondents with consistently ordered rankings on all vignettes ($z_{j-1} < z_j$ , for $j = 2,..., J$), we create the DIF-corrected self-assessment $C_i$
+
+$$ C_{i} = 
+ \begin{pmatrix}
+  1 &  \quad \text{if} \quad  y_i < z_{i1} \quad \quad\quad  \\
+  2 &  \quad \text{if} \quad  y_i = z_{i1} \quad \quad \quad \\
+  3 &  \quad \text{if} \quad  z_{i1} < y_i < z_{i2}\quad  \\
+  \vdots  & \vdots  \\
+  2J + 1& \quad \text{if} \quad  y_i > z_{iJ} \quad  \quad\quad  
+ \end{pmatrix}$$
+
+Respondents who give tied or inconsistently ordered vignette responses may have an interval values of C, if the tie/inconsistency results in multiple conditions in equation 1 appearing to be true. A more general definition of C is defined as the minimum to maximum values among all the conditions that hold true in equation 1. Values of C that are intervals, rather than scalar, represent the set of inequalities over which the analyst cannot distinguish without further assumption.
+
+![Fig3](fig3.png)
+
+## 4.2. Example Code: anchors(). 
+
+This example again first loads the library and example dataset, and then anchors() calculates C for each individual. In the non-parametric estimation, only one self-question and corresponding set of vignettes
+are analyzed at a time.
+
+```{r}
+summary(freedom)
+```
+```{r}
+a1 <- anchors(self ~ vign2+vign3+vign4+vign5+vign6, freedom, method="C")
+summary(a1)
+```
+
+The names of vignettes must be passed to the function in the same order as the direction of the responses. In the example, vign2 is in the same (highest) direction as the response category 1, while the vign6 is in the same direction (lowest) as the response category 5. (We drop vign1 here for space reason when printing the summary-with the different combinations of intervals of C can be numerous.)
+
+
+* If anchors produces many ties you should check that you passed the vignettes in the correct order, but we also offer a function that investigates the ordering of vignettes in detail.
+
+
+
+
+
+## 4.3. Example Code: anchors.order().
+The function anchors.order(), and the associated methods summary.anchors.order and barplot.anchors.order investigate the relationship between vignette responses without reference to the self-
+assessment question.
+
+```{r}
+vo1<-anchors.order(~vign2+vign3+vign4+vign5+vign6, freedom)
+summary(vo1,top=10,digits=3)
+```
+In the first column, the numbers in the first column are the index for the vignettes given the order in which they were written (left to right) in the formula passed to anchors.order(). It happens in this example that the index values also correspond to the numbers in the labels of the vignettes, but that need not be the case. Vignettes that have the same response value are placed within {} brackets.
+
+The most common set of responses is to give one value for vign1, and another greater value for {vign2,vign3,vign4,vign5}, and the next most common ranking is giving all vignettes the same value (Frequency = 277). 
+
+The two columns Ndistinct and Nviolation are included to facilitate alternative orderings of the summary of vignette rankings, as well as a quick source of information. For example, the fourth row, 1, {2,4},{3,5}, has Ndistinct = 3 distinct response levels. Although this is easily calculated by counting the number of distinct sets in the first column, having Ndistinct column provides a summary of how many different response values are observed for each constellation of ordering of vignettes. In this example, since there are only five response categories but five vignettes there must be at least one vignette that has the same response
+values. The maximum Ndistinct value is thus 4.
+
+Also in the fourth row, we also have Nviolation = 1 because in these cases the 4th vignette has a value less than the 3th vignette. The column Nviolation is calculated by the number of times any of the vignette responses are strictly contrary to the natural ordering, as given by the user's formula (ordered left to right).
+
+In this list of vignette response rankings the careful observer might note that ties and order violations occur one pair of vignettes, between vign3 and vign4. The summary() function seeks to make it easier than staring at this list to identify troublesome patterns by providing two additional summary statistics.
+
+Immediately above the listing of orderings is a matrix. In the upper triangle is $p_{ij} - p_{ji}$, such that negative number indicate a disjunction between the order of the listed vignettes and their responses. Continuing the comparison of vign3 and vign4, we have the negative valuesfor $p_{34} - p_{43} = -0.156$, which provides a quick summary that there is an inconsistency of the expert ordering. The proportion of ties between each pair of vignettes is shown in the lower triangle. The proportion of ties in the comparison of vign3 and vign4 is 0.339. 
+
+There is an issue in the political freedom data with the ordering between vign3 and vign4. Reasonable people might disagree (and apparently the respondents do) about which scenario indicates less freedom: Bob writes letters to newspapers about politics using a pseudonym, while Michael makes his opinion known on most issues without regard to who is listening. For some respondents the mere existence of a
+media outlet such as a paper to which one could write a letter discussing political subjects may be the more important indicator of freedom than the ability to talk publicly about politics. The substance of the Sonny and Vito vignettes seem to be correctly ordered, but perhaps the reversal is due to whether or not the vignette ends with the statement about men being taken away for speaking out against the government. Further indicating that vign4 describes a more repressive scenario, it is more often tied with the most extreme vign6 than any other vignette.
+
+Above this matrix is a matrix the number of times that reversals in responses occur as matrix of pairwise comparison between vignettes. Each cell summarizes the proportion of cases that the vignette listed at the beginning of the row i has a response less than the vignette listed in column $j$. Let $p_{ij}$ be the value in cell $(i, j)$, then $1 - p_{ij} - p_{ji}$ is the number of cases where vignette i and vignette $j$ have the same value. For example, the proportion of cases where vign3<vign4 is 0.183, while the proportion of cases where vign4<vign3 is 0.339. Since
+$p_{34} < p_{43}$ there appears to be an inconsistency of the expert ordering.
+
+The summary finally provides some basic frequencies for types of responses. Most of the respondents (3233/3500) use at least two different response categories in evaluating the vignettes. The disjunction between the order of vignettes and response values are also evident from the small number of case (1178/3500) that have vignette responses that take on more than one level and are (weakly) in the same natural order as the vignettes.
+
+The analysis of vignettes is useful both at the stage of evaluating a pilot study of survey instruments, as well at the stage of choosing how (and whether) to use particular vignettes. 
+The results of non-parametric anchoring vignettes analysis using C are entirely dependent on which vignettes are included and the order in which they are specified.
+
+
+```{r}
+barplot(vo1)
+```
+
+Details of how to interpret and use the output of the summary are provided in ?, where it is discussed in detail how vign6 is given the highest response almost half the time, however vign4 is more often given the highest response than vign5.
+
+In light of this it is worth reestimating C using the consensus ordering of the vignettes,
+
+```{r}
+a2 <- anchors(self ~ vign2+vign3+vign5+vign4+vign6, freedom, method="C")
+summary(a2)
+```
+Changing the assumed ordering of the vignettes increased the number of cases without any order violation by 60 percent. With respect to the top sets of types of ordering,
+
+The analysis of vignettes is useful both at the stage of evaluating a pilot study of survey instruments, as well at the stage of choosing how (and whether) to use particular vignettes. The results of non-parametric anchoring vignettes analysis using C are entirely dependent on which vignettes are included and the order in which they are specified.
+
+
+## 4.4. Relative ranks: calculations, vignette selection, and plotting
+After the researcher has deduced or confirmed the order of vignettes, the calculation of C using the function anchors() uses a similar syntax but with the additional designation of the self-assessment variable on the right hand side. In this example, the self-assessment variable is aptly named self, and C is calculated by,
+
+```{r}
+a2 <- anchors(self ~ vign2+vign3+vign5+vign4+vign6, freedom, method="C", combn = TRUE)
+
+summary(a2)
+```
+
+Note that anchors() function again assumes that the vignettes are entered into formula in ascending order from left to right.
+
+The summary of the frequencies of the scalar and interval values of C can be rather extensive. The row names Cs to Ce indicate the interval of C; if Cs = Ce then C is a scalar. The columns N and Prop are the frequency and proportion of the cases, respectively.
+
+In all approaches the predictions of scalar valued observations are fixed at their observed values, independent of the assumptions of each model. Predictions of vector valued observations are restricted to within their observed range, also with certainty and independent of modeling choices. Thus the more scalar values, the less the assumptions of a particular approach will affect the histogram. Similarly, the narrower the intervals of non-scalar values, the less assumptions matter as well.
+
+The choice of methods will depend on whether one wants to assume a particular allocation method to make a particular argument (e.g., a worst case scenario) , or whether one would like to believe in a parametric model.
+
+## 4.4. Example Code: Subsets of vignettes. 
+
+Calculating entropy for subsets of vignettes as suggested byWand and King (2007) is straightforward. The anchors(,combn=TRUE) calculates statistics of interest, including entropy measures, for every ordered combination of vignettes. For more details, please see help(anchors.combn) in R and King and Wand (2007).
+
+The function with the addition of the option anchors(, combn=TRUE) looks at all combinations of subsets of vignettes and calculates the minimum entropy and (optionally) the entropy based on estimated values of a censored ordered probit model. The function  also summarizes how many interval valued C are present for a particular subset of vignettes.
+
+In this particular data, a researcher would have to have a specific justification for using all six vignettes, instead of four or five (specifically vign2, vign1, vign3, vign6 or vign2,vign1, vign3, vign5, vign6). Using all six vignettes creates almost twice as many ties as using only four vignettes (vign2,vign1,vign3,vign6). The difference between Figures 1 and 2, and in particular why the latter is essentially insensitive to the method of creating the histograms, are explained primarily by the reduction in ties by the use of fewer vignettes. Note that the best minimum entropy selected subsets may not simply drop vignettes when reducing the number of vignettes, but may actually switch vignettes as well. Consider the sequence for the freedom data of the highest minimum entropy for different J. vign5 is dropped from J = 5 to J = 4, reappears at J = 2, and is the best vignette if one were to choose just one. vign2 is dropped from J = 4 to J = 3, but reappears at J = 2. Note also that an important feature of including cpolr= variables is that cases with any missing value in the covariates will be listwise deleted for both the estimated and minimum entropy calculations to ensure a common basis for comparisons. As such, the minimum entropy values may change as a function of what variables (if any) are included in cpolr=. The column Interval Cases also shows how many interval valued C are present for a particular subset of vignettes.
+
+```{r}
+data(freedom)
+fo <- list(self = self ~ 1,
+ vign = cbind(vign1,vign3,vign6) ~ 1,
+ cpolr= ~ as.factor(country) + sex + age + educ)
+ent <- anchors(fo, data = freedom, method="C", combn=TRUE)
+summary(ent,digits=3)
+```
+
+
+
+
+### Subsetting and plotting
+Since C is defined for each case only relative to an individual's own responses, it is sometimes useful to do the analysis separately for each region.
+
+```{r}
+fo <- list(self = self ~ 1, vign = cbind(vign1,vign3, vign6) ~ 1, cpolr = ~sex + age + educ)
+
+a1e <- anchors(fo, freedom, method = "C", subset = country == "Eastasia")
+a1o <- anchors(fo, freedom, method = "C", subset = country == "Oceania")
+```
+
+The barplot() method for anchors.rank objects plots the (average) fitted proportions for each value of C. As many anchors.rank objects can be passed to barplot(), and the fitted proportions from each object will be placed beside each other, in the order given. To produce Figure 2, we invoke:
+
+```{r}
+par(mfrow = c(2, 2))
+ylim <- c(0, 0.5)
+barplot(a1e, a1o, ties = "omit", ylim = ylim, main = "Omit Tied Cases")
+barplot(a1e, a1o, ties = "uniform", ylim = ylim, main = "Uniform Allocation")
+barplot(a1e, a1o, ties = "cpolr", ylim = ylim, main = "Censored Ordered Probit Allocation")
+barplot(a1e, a1o, ties = "minentropy", ylim = ylim, main = "Minimum Entropy Allocation")
+```
+
+Figure 2: Approaches to summarizing the distribution of C: all figures are based on same political freedom model specified as, self $\sim$ vign1 + vign3 + vign6. Dark histogram is for Oceania subsample, light histogram is for East Asia subsample.
+
+
+
+In practice, there may be a trade-off in selecting a subset of the available vignettes between reducing the frequency of interval valued C and the number of distinctions that are made by C. By reducing the number of cases with interval values, the assumptions of the different approach are also reduced. Figure 2 plots the same four types of $\hat C$ histograms, but this time using only vign1, vign3, and vign6 to construct $\hat C$, instead of all six vignettes. The histograms are essentially the same except for the minimum entropy figure which has a larger
+P($\hat C$ = 5) for Oceania respondents.
+
+
+
+
+
+One important feature to be noted about including cpolr= variables is that cases with any missing value in the covariates will be listwise deleted for both both the estimated and minimum entropy calculations to ensure a common basis for comparisons. As such, the minimum entropy values may change as a function of what variables (if any) are included in cpolr=. 
+
+The plot() method is described in help(plot.anchors.rank), and an example
+is given here,
+
+```{r}
+plot(ent)
+```
+
+### Related functions: insert
+The functions insert() and cpolr(), along with the method fitted() can be used directly in combination to produce the censored ordered probit histogram values,
+
+```{r}
+a1 <- anchors(fo, method = "C", data = freedom)
+freedom2 <- insert(freedom, a1)
+ca1 <- cpolr(cbind(Cs, Ce) ~ sex + age + educ + as.factor(country), data = freedom2)
+ca1e <- fitted(ca1, a1e, Cvec = TRUE)
+ca1o <- fitted(ca1, a1o, Cvec = TRUE)
+barplot(rbind(ca1e, ca1o), main = "Minimum Entropy", beside = TRUE, xlab = "C")
+```
+
+
+The helper function insert() correctly combines the value of C found in a1 with the original data set. Specifically the two columns defining the range of C, Cs and Ce, are added to the data set while taking into account that cases may have been omitted when creating C.
+
+Note that C is defined for all consecutive integers from 1 to 2J + 1, where J is the number of anchoring vignettes. If for a given data set, there are no observations that have a C value of any integer $j \in (1, ..., 2J + 1)$, then P($\hat C = j$) = 0 even if there are interval values of C that include j. Thus, cpolr() omits the cutpoint associated with missing scalar response categories, just as polr() would omit cutpoints for any missing response categories in the standard ordered probit.
+
+In the function fitted(...,Cvec = TRUE) for cpolr objects this option requests the return of a 2J + 1 vector of the average probabilities for each of the ^ C categories (it simply does apply(...,1,mean) on the fitted matrix of probabilities). This summary vector is common enough a interest (as it is in this example) that it is simply incorporated into the function as an option.
+
+# 5. Parametric Model
+
+This section describes the Compound Hierarchical Ordered Probit (chopit) model.
+
+The following section describes the implementation of general class of parametric models for analyzing survey responses with anchoring vignettes. Considerable 
+exibility is provided in how to specify and identify the models so that users can easily make comparisons to different standard models of analyzing ordinal responses.
+
+### Indexing notation
+We index survey questions, response categories, and respondents as follows:
+
+* we index vignette survey questions by $j$. One or more vignette questions are indicated by $j = 1,..., J_s$. In contrast to the non-parametric model, it is possible to have only a self-assessment for some respondents (indicated by $j$ = 0).
+
+* we index response categories by $k (k = 1,..., K_s$) Each set of questions (self-assessment and vignettes) must have the same choice categories coded as increasing sequential integers starting with 1. Missing values (whether structural, because the question was not asked, or due to non-response) should be coded as $k = 0$.
+
+* we index respondents by $i$. Respondent $i (i = 1,...,n$) may be asked a self-assessment question or vignette questions (or both). Indeed, any combination of questions is possible (e.g., asking $i$ all vignettes but no self evaluation; asking some vignettes and no self-evaluation, etc.) If an individual is not a question (self-evaluation or vignette) use the missing value code ($k = 0$), and this question will be dropped from the likelihood function.
+
+Thus, every mathematical symbol in the model could be indexed by $j, k$, and $i$.
+
+
+
+## 5.1. Self-assessment component.
+
+Figure 1 summarizes the self-assessment component of the model. The actual level for respondent $i$ is $\mu_i$, a continuous unidimensional variable (with higher values indicating more freedom, better health, etc., defined by the order of the vignettes). Respondent i perceives $\mu_i$ only with random normal error so that
+
+$$Y^*_{is} \sim N(\mu_i, \sigma^2_{s})$$
+
+is respondent $i$'s unobserved perceived level. The actual level is a linear function of observed covariates $X_i$, the first column of which can be a constant term (if it is not needed for identification) and an independent normal random effect $\eta_i$:
+
+$$\mu_{i} = X_i\beta + \eta_i$$
+
+with parameter $\beta$ and
+
+$$\eta_i \sim N(0, \omega^2)$$
+
+The reported survey response category is $y_{is}$ and is generated by the model via this observation mechanism:
+
+$$ y_{is} = k \quad  \text{if} \quad  \tau^{k-1}_{is} \leq Y^*_{is} < \tau^k_{is}$$
+
+![Fig1. Self-Assessment Component](fig1.png)
+Figure 1. Self-Assessment Component: All levels vary over ob-
+servations i. Each solid arrow denotes a deterministic effect; a
+squiggly arrow denotes the addition of normal random error with
+variance indicated at the arrow's source.
+
+
+![Fig2. Vignette Component](fig2.png)
+
+Figure 2. Vignette Component for question set $s$ ($s = 1,..., S', S' \leq S$). All levels vary over observations `. Each solid arrow de-
+notes a deterministic effect; a squiggly arrow denotes the addition
+of normal random error with variance indicated at the arrow's
+source.
+
+
+with a vector of thresholds $\tau_{is}$ (where $\tau_{is}^{0} = -\infty,  \tau_{is}^{K_s} = \infty$ and $\tau_{is}^{k-1} < \tau_{is}^{k}$ with
+indexes for categories $k = 1,...,K_s$ and self-assessment questions $s = 1, ...,S$) that vary over the observations as a function of a vector of covariates, $V_i$ (the first column of which can be a constant term), and unknown parameter vectors $\gamma_s$(with elements the vector $\gamma_s^k$):
+
+$$\tau^1_{is} = \gamma^1_{s}V_i$$
+$$\tau^k_{is} = \tau^{k-1}_{is} + e^{\gamma^k_{s}V_i}\quad (k=s,..,K_s -1)$$
+## 5.2. Vignette Component. 
+
+Figure 2 summarizes the vignette component of the model for question set $s (s = 1,..., S)$. Under the model, one or more of the self-assessment questions have corresponding vignettes.
+
+The actual level for vignette j is $\theta_j$ ($j = 1,..., J_s$), measured on the same scale as $\mu_i$ and the $\tau$'s. Respondent $l$ perceives $\theta_j$ with random normal error so that
+
+$$Z^*_{lsj} \sim N(\theta_j, \sigma^2_{sj})$$
+represents respondent $l$'s unobserved assessment of the level of vignette $j$ for question set $s$.
+
+The perception of respondent $l$ about the level of vignette $j$ elicited via a survey question $s$ with the same $K_s$ ordinal categories as the corresponding self-assessment question. Thus, the respondent turns the continuous $Z^*_{lsj}$ into a categorical answerto the survey question  $Z_{lsj}$via this observation mechanism:
+
+
+$$Z_{lsj} = k \quad  \text{if} \quad  \tau^{k-1}_{ls} \leq Z^*_{lj} < \tau^k_{ls}$$
+
+
+
+with thresholds determined by the same $\gamma_s$ coefficients as in (6) for $y_{i1}$, and the same explanatory variables but with values measured for units $l, V_l$:
+
+$$\tau^1_{il} = \gamma^1_{s}V_l$$
+$$\tau^k_{l1} = \tau^{k-1}_{ls} + e^{\gamma^k_{s}V_l}\quad (k=s,..,K_1 -1)$$
+
+## 5.3. Identification. 
+
+The model as specified above has an infinite number of equivalent maximum likelihood solutions. To identify the model, two choices must be
+made:
+
+* (1) The mean of the actual level must be set, by choosing one point. This can be done by setting the constant term $\beta_0 = 0$ (in which case be aware of your choice of the scale of the variables in $X$), or one of the $\beta$'s.
+
+* (2) The variance of the actual level must also be set. This can be done by setting all the self-assessment variances (such as $\sigma^2_{s} = 1$, for all $s$) or by setting another point among $\beta_0$ or the $\theta$'s.
+
+Two common parameterizations are as follows:
+
+* (1) The ordinal probit parameterization is useful for comparing chopit to this simpler model. Set $\beta_0 = 0$ and $\sigma^2_1 = ... = \sigma^2_s = 1$.
+
+* (2) Another option is parameterization defined by the extreme vignettes. Let $\theta_1 = 0$ and $\theta_{Js} = 1$. This lets estimates of $\mu$ be interpreted on the scale of the vignettes, with 0 being the level of the lowest vignette and 1 the level of the highest. Note that $\mu$ can still be higher than 1 or lower than 0, but the units are easily interpretable.
+
+## 5.4. Example Code: chopit().
+
+The chopit() function provided by anchors at it's most basic simply requires specifying the formula's defining $y_s, z_s$, and $\tau$s. For example, using variables from the data(freedom) dataset, we have the named list.
+
+```{r}
+fo <- list(self = self ~ sex + age + educ + factor(country) ,
+ vign = cbind(vign1,vign2,vign3,vign4,vign5,vign6) ~ 1 ,
+ tau = ~ sex + age + educ + factor(country) )
+```
+
+
+The names self=, vign=, and tau= as written, are required. On the LHS of the equality signs are the variables of the dataset that specify the details of the models as for other models (e.g., lm()).
+
+The self-assessment variable self is modeled to have a mean that is a linear additive function of sex, age, educ and country dummies. The vignettes are specified as a vector of outcomes cbind(vign1, vign2, vign3, vign4, vign5, vign6) as a function of only an intercept '$\sim$ 1'. This is both a simple and accurate way to describe the model of $\theta$s which are the mean locations of the vignettes. The $\tau$
+cutpoints shared by the self-assessment and the vignettes are specified as their own formula without a LHS variable.
+
+
+Beyond the formula and data, the rest will be set by default in the basic invocation,
+
+```{r}
+cout <- chopit(fo, data = freedom)
+```
+The default invocation uses the the ordinal probit normalization, which identifies/normalizes the model by omitting the intercept in $\mu$, and setting $\sigma_1 = 1$ (the variance of the first self-assessment question). If one specified the explanatory variables of self= to include an intercept, then that intercept parameter would be constrained to be zero as will be beta.(Intercept) in this example.
+
+The object cout contains the results of the analysis, and is of class chopit. The method summary() for chopit objects is useful for printing coefficients, log-likelihoods and related information. The likelihood is listed both overall, as well as for each component self-assessment and vignette.
+
+
+which can be summarized by the summary method,
+```{r}
+summary(cout)
+```
+Note that parameters fixed by identification restrictions are shown but have their standard errors (chopit.se) listed as NaN. The naming convention of the parameters is as follows. First there are the gamma ( ) parameters. Among the entire set of gamma parameters, the set of parameters associated with each cutpoint are grouped by the second appended label (cut1, cut2, etc), and the names of the covariates appended last (e.g., age, educ). Next, there the standard deviations of the normal distributions in the model: the row sigma.self represents $\sigma$; sigma.vign1 represents $\sigma_1$, etc. Similarly, theta.vign1 represents the mean location
+of the first vignette, theta.vign2 represents the mean locating of the second vignette, etc. Finally, the beta rows represent the parameters associated with estimating the location of self-evaluations.
+
+
+
+## 5.5. Identification
+
+The parameters of the model requires identification restrictions:
+
+* 1. The location on the actual (latent) scale must be chosen. This can be done by setting the intercept of the self-evaluation equations to a fixed value ($\beta_0 = 0$ matches the convention of ordered probits) or one of the $\theta$'s.
+
+* 2. The scale of the actual (latent) level must also be chosen. This can be done by setting the self-assessment variance to a fixed value values ($\sigma^2 = 1$ matches the convention of ordered probits) or by setting another $\theta$'s.
+
+Two common parameterizations are as follows:
+
+* As noted, the ordinal probit parameterization is useful for comparing chopit to this simpler model. Set $\beta_0 = 0$ and $\sigma^2 = 1$. This is the default, and no action is needed by the user.
+
+* Note: the variances of the vignettes are estimated under this default normalization. To further constrain the variances of the vignette stochastic terms $\sigma^2_j$ to also be equal to 1, use the option
+
+* R> chopit(fo, freedom, options = anchors.options(single.vign.var = TRUE))
+
+
+* 2. Another option is parameterization defined by the extreme vignettes. Let $\theta_1 = 0$ and $\theta_J = 1$. This lets estimates of $\mu$ be interpreted on the scale of the vignettes, with 0 being the level of the lowest vignette and 1 the level of the highest. Note that $\mu$ can still be higher than 1 or lower than 0.
+
+* To identify the model by setting $\theta_1 = 0$ and $\theta_J = 1$, use the option
+
+R> chopit(fo, freedom, options = anchors.options(normalize = "hilo"))
+
+* Caution: The order of the vignettes does matter for this normalization. If you constrain the $\=theta$ parameters to have an order different from what would be estimated without constraints, odd results such as extremely large standard errors and implausibly large parameter estimates can occur. $Hint$: if in doubt, use the normalize = "self" model first to establish the order of the vignettes
+
+## 5.6. Additional options
+
+There are a variety of options, among which the following are the most often used,
+
+* Instead of the default optimizer optim(), use genoud() (Mebane and Sekhon 2009a,b):
+e.g.,
+
+```{r}
+cout2 <- chopit(fo, freedom,
+                options = anchors.options(optimizer = "genoud",
+                                          start = cout$parm,
+                                          print.level = 1))
+```
+As there is as yet no proof of the global concavity of the chopit likelihood, a prudent researcher should investigate whether a choit model fitted using optim() is potentially at a local maximum rather than the global maximum of likelihood. Genoud does not rely on global concavity of the likelihood, and is an efficient approach to finding the global maximum.
+
+* The option use.gr toggles whether or not to use the analytical gradients that have been derived for the model with a linear parameterization of cutpoints. If use.gr = TRUE then analytical gradients are used. The use of numerical gradients via use.gr = FALSE, which is currently required if $\tau$ are specified as non-linear function, is significantly more time consuming to estimate.
+
+* See help("chopit") and demo("chopit") for additional examples of options.
+
+
+### C_MinEnt
+
+```{r}
+freedom2$C_minent <- (freedom2$Ce + freedom2$Cs)/2
+table(freedom2$self, freedom2$C_minent)
+```
+
+
+# 6. Manual
+
+## 6.1. Insert DIF-corrected variable into original data frame
+
+```{r}
+data(freedom) 
+ra <- anchors(self ~ vign1 + vign3 + vign6, data = freedom, method="B")
+freedom3 <- insert(freedom, ra )
+names(freedom)
+```
+
+# 7. Reference
+
+* https://blog.naver.com/smileaddict/222569930575
