@@ -1,0 +1,340 @@
+---
+title: "ClimateChange"
+author: "CheonGeunChoi"
+date: "2024-09-16"
+output: html_document
+---
+
+```{r}
+rm(list=ls())
+gc()
+```
+
+```{r}
+library(lme4)
+library(texreg)
+library(effectsize)
+library(stm)
+library(quanteda)
+library(tm)
+library(geometry)
+library(igraph)
+library(Rtsne)
+library(rsvd)
+library(Amelia)
+library(car)
+library(graphics)
+```
+
+
+```{r}
+setwd("...")
+##FIGURE 1 
+
+#left panel: AmericasBarometer
+DiffsGDP<-read.csv('LADiffsStand.csv', stringsAsFactors=FALSE)
+
+cor.test(DiffsGDP$StandDiff, log(DiffsGDP$GDPPC)) #corr at 0.7
+
+plot(StandDiff ~ log(GDPPC), DiffsGDP, xlim=c(6,12), xlab="GDP per capita (logged)", ylab="Gender Gap (Female Mean - Male Mean)", main="Gender Gap in Perceived Seriousness of Climate Change \n by Level of Economic Development (AmericasBarometer)") + abline(h=0, col="black") + with(DiffsGDP, text(StandDiff ~log(GDPPC), labels = Country, pos = 4, cex=1)) + text(7, 0.3, "R = 0.70, p < 0.001", cex=1, col="black")
+```
+
+
+```{r}
+##right panel: Pew data 
+CountryLevel<-read.csv('CountryLevelPew.csv')
+
+cor.test(log(CountryLevel$GDPPC), CountryLevel$Diffs) #cor = 0.61
+
+plot(Diffs ~., CountryLevel, xlim=c(6,12), xlab="GDP per capita (logged)", ylab="Gender Gap (Female Mean - Male Mean)", main="Gender Gap in Perceived Seriousness of Climate Change \n by Level of Economic Development (Pew Data)") + abline(h=0, col="black") + with(CountryLevel, text(Diffs ~log(GDPPC), labels = Country, pos = 4, cex=1)) + text(6.8, 0.45, "R = 0.61, p < 0.001", cex=1, col="black")
+```
+
+
+```{r}
+##Figure 2
+
+#left panel, AmericasBarometer 
+
+Americas<-read.csv("AmericasLevels.csv")
+
+par(mfrow=c(1,1))
+
+plot(Women ~ log(GDPPC), Americas,  xlim=c(6.5,12), ylim=c(-0.9, 0.3), xlab="GDP per capita (logged)", ylab="Climate Attitudes (Standardized", col="grey21", main="Average Perceived Seriousness of Climate Change \n by Level of Economic Development (AmericasBarometer)") + abline(h=0, col="grey") + with(Americas, text(Women ~log(GDPPC), labels = Country, pos = 4, cex=1)) + abline(lm(Women ~log(GDPPC), Americas), col='grey21', lty=2) + points(Men ~log(GDPPC), Americas, xlab="GDP per capita (logged)", ylab="Climate Attitudes", col="black", pch=17) + with(Americas, text(Men ~log(GDPPC), labels = Country, pos = 4, cex=1)) + abline(lm(Men ~log(GDPPC), Americas), col='black')
+
+# Console 참에서 시도할것
+# plot(Women ~ log(GDPPC), Americas,  xlim=c(6.5,12), ylim=c(-0.9, 0.3), xlab="GDP per capita (logged)", ylab="Climate Attitudes (Standardized", col="grey21", main="Average Perceived Seriousness of Climate Change \n by Level of Economic Development (AmericasBarometer)") + abline(h=0, col="grey") + with(Americas, text(Women ~log(GDPPC), labels = Country, pos = 4, cex=1)) + abline(lm(Women ~log(GDPPC), Americas), col='grey21', lty=2) + points(Men ~log(GDPPC), Americas, xlab="GDP per capita (logged)", ylab="Climate Attitudes", col="black", pch=17) + with(Americas, text(Men ~log(GDPPC), labels = Country, pos = 4, cex=1)) + abline(lm(Men ~log(GDPPC), Americas), col='black') + legend(6.5, -0.75, legend=c("Women", "Men"), col=c("grey21", "black"), lty=c(2, 1), cex=1) 
+
+
+#right panel, Pew data
+
+CountryLevel<-read.csv("PewLevels.csv")
+
+plot(LevelMen ~log(GDPPC), CountryLevel, col="black", xlim=c(6,12), ylim=c(-0.7, 0.7), xlab="GDP per capita (logged)", ylab="Climate Attitudes (Standardized)", main="Average Perceived Seriousness of Climate Change \n by Level of Economic Development (Pew)", cex.main=1, pch=17) + abline(h=0, col="grey") + abline(lm(LevelMen ~log(GDPPC), CountryLevel), col="black") + with(CountryLevel, text(LevelMen ~log(GDPPC), labels = Country, pos = 4, cex=1)) + points(LevelWomen ~log(GDPPC), CountryLevel, col="grey21") + abline(lm(LevelWomen ~log(GDPPC), CountryLevel), col="grey21", lty=2) + with(CountryLevel, text(LevelWomen ~log(GDPPC), labels = Country, pos = 4, cex=1))
+
+# plot(LevelMen ~log(GDPPC), CountryLevel, col="black", xlim=c(6,12), ylim=c(-0.7, 0.7), xlab="GDP per capita (logged)", ylab="Climate Attitudes (Standardized)", main="Average Perceived Seriousness of Climate Change \n by Level of Economic Development (Pew)", cex.main=1, pch=17) + abline(h=0, col="grey") + abline(lm(LevelMen ~log(GDPPC), CountryLevel), col="black") + with(CountryLevel, text(LevelMen ~log(GDPPC), labels = Country, pos = 4, cex=1)) + points(LevelWomen ~log(GDPPC), CountryLevel, col="grey21") + abline(lm(LevelWomen ~log(GDPPC), CountryLevel), col="grey21", lty=2) + with(CountryLevel, text(LevelWomen ~log(GDPPC), labels = Country, pos = 4, cex=1)) + legend(5.9, -0.55, legend=c("Women", "Men"), col=c("grey21", "black"), lty=c(2, 1), cex=1)
+```
+
+
+```{r}
+#Table 1 (models 1 - 3): Americas Barometer 
+# Error in initializePtr() :   function 'chm_factor_ldetL2' not provided by package 'Matrix'
+#tools::package_dependencies("Matrix", which = "LinkingTo", reverse = TRUE)[[1L]]
+#install.packages("lme4", type = "source")
+
+lapop<-read.csv( "LAPOPData2.csv")
+
+mixed1<-lmer(ClimStand ~ female + log(GDPPC) + (log(GDPPC) *female) + (1 +log(GDPPC) | country), data= lapop) #
+summary(mixed1) #interaction term high significant (p<0.001)
+
+mixed2<-lmer(ClimStand ~ female + ideo + log(GDPPC) + (log(GDPPC) *female) + (1 +log(GDPPC) | country), data= lapop) #
+
+mixed3<-lmer(ClimStand ~ female + HHIncome + Edu + ideo + log(GDPPC) + (log(GDPPC) *female) + (1 +log(GDPPC) | country), data= lapop) #
+
+screenreg(list(mixed1, mixed2, mixed3), digits=3) 
+
+texreg(list(mixed1, mixed2, mixed3), digits=3)
+
+pew<-read.csv('PewData.csv')
+
+#Table 1 (models 4 - 6): Pew
+
+mixedP1<-lmer(ClimStand ~ Female + log(GDPPC) + (log(GDPPC) *Female) + (1 +log(GDPPC) | Country), data= pew) #
+summary(mixedP1) #interaction term high significant (p<0.001)
+
+mixedP2<-lmer(ClimStand ~ Female + Ideo + log(GDPPC) + (log(GDPPC) *Female) + (1 +log(GDPPC) | Country), data= pew) #
+summary(mixedP2) #i 
+screenreg(list(mixedP2))
+
+mixedP3<-lmer(ClimStand ~ Female + Edu + StandIncome + Ideo + log(GDPPC) + (log(GDPPC) *Female) + (1 +log(GDPPC) | Country), data= pew) #
+summary(mixedP3)
+
+screenreg(list(mixedP1, mixedP2, mixedP3), digits=3)
+texreg(list(mixedP1, mixedP2, mixedP3), digits=3)
+
+
+##Figure 4
+#Netquest gaps and levels 
+
+all_country<-read.csv("NetquestCountry.csv")
+
+#Left panel
+plot(log(all_country$GDP), all_country$gaps_stan_across, xlim=c(8.75,11.2), xlab="GDP per capita (logged)", ylab="Gender Gap (Women Mean - Men Mean)") + text(log(all_country$GDP),all_country$gaps_stan_across, labels= all_country$country, cex=1, font=2, adj=0)
+```
+
+
+```{r}
+#Right panel
+
+plot(all_country$men_levels ~log(all_country $GDPPC), col="black", xlim=c(8,12.5), ylim=c(-1.2, 1), xlab="GDP per capita (logged)", ylab="Climate Attitudes (Standardized)", pch=17) + abline(h=0, col="grey") + abline(lm(all_country $men_levels ~log(all_country $GDPPC)), col="black") + with(all_country, text(men_levels ~log(GDPPC), labels = country, pos = 4, cex=1)) + points(all_country $women_levels ~log(all_country $GDPPC), col="grey21") + abline(lm(all_country $women_levels ~log(all_country $GDPPC)), col="grey21", lty=2) + with(all_country, text(women_levels ~log(GDPPC), labels = country, pos = 4, cex=1)) 
+
+## 전체 그래프는 컨솔에서 
+# plot(all_country$men_levels ~log(all_country $GDPPC), col="black", xlim=c(8,12.5), ylim=c(-1.2, 1), xlab="GDP per capita (logged)", ylab="Climate Attitudes (Standardized)", pch=17) + abline(h=0, col="grey") + abline(lm(all_country $men_levels ~log(all_country $GDPPC)), col="black") + with(all_country, text(men_levels ~log(GDPPC), labels = country, pos = 4, cex=1)) + points(all_country $women_levels ~log(all_country $GDPPC), col="grey21") + abline(lm(all_country $women_levels ~log(all_country $GDPPC)), col="grey21", lty=2) + with(all_country, text(women_levels ~log(GDPPC), labels = country, pos = 4, cex=1)) + legend(11, 1, legend=c("Women", "Men"), col=c("grey21", "black"), lty=c(2, 1), cex=1)
+```
+
+
+```{r}
+##Figure 5 
+#Cross-national STMs, including associated regressions 
+
+stm_data<-read.csv('CrossNationalSTM.csv')
+
+#add original language 
+stm_data$language<-recode(stm_data$country, " c('USA', 'UK') = 'English'; c('Argentina', 'Chile', 'Colombia', 'Mexico', 'Peru', 'Spain') = 'Spanish'; c('Brazil', 'Portugal') = 'Portuguese' ")
+
+processed <- textProcessor(stm_data $response, metadata = stm_data, customstopwords = 
+                             c("i", "me", "my" , "myself", "we", "our", "ours", 
+      "ourselves", "you" ,       "your"     ,  "yours"  ,    "yourself" , 
+      "yourselves", "he", "him" ,"his", "himself" ,"she", "her", "hers",     
+      "herself" ,   "it",      "its"     ,   "itself"    ,
+      "they" ,      "them"  ,     "their"  ,    "theirs"  ,  
+      "themselves" ,"what"   ,    "which" ,     "who"       ,
+      "whom"     ,  "this"    ,   "that"   ,    "these"     ,
+      "those"   ,   "am"       ,  "is"     ,    "are"       ,
+      "was"  ,      "were"      , "be" ,        "been"      ,
+      "being"  ,    "have"  ,     "has"  ,      "had"       ,
+      "having" ,    "do"    ,     "does" ,      "did"       ,
+      "doing"   ,   "would" ,     "should"   ,  "could"     ,
+      "ought" ,     "i'm"    ,    "you're" ,    "he's"    ,  
+      "she's"   ,   "it's"    ,   "we're"    ,  "they're"   ,
+      "i've" ,   "you've" ,    "we've"    ,  "they've"   ,
+      "i'd"   ,     "you'd"  , "he'd"   ,    "she'd"     ,
+      "we'd"  ,     "they'd"   ,  "i'll"    ,   "you'll" ,    
+      "he'll"  ,    "she'll"    , "we'll"  ,    "they'll"  ,  
+      "isn't"   ,   "aren't" ,    "wasn't"  ,   "weren't"  , 
+      "hasn't" ,    "haven't" ,   "hadn't" ,    "doesn't"  , 
+      "didn't"   ,  
+      "shan't"  ,   "shouldn't" , "can't"    ,  "cannot"   , 
+      "couldn't" ,  "mustn't",    "let's"     , "that's" ,
+      "who's"   ,   "what's"   ,  "here's"  ,   "there's"  , 
+      "when's" ,    "where's",    "why's"  ,    "how's"     ,
+      "a"      ,    "an"   ,      "the"    ,    "and"  ,     
+      "but"    ,    "if"    ,     "or"     ,    "because",   
+      "as"     ,    "until"  ,    "while"  ,    "of"   ,     
+      "at"     ,    "by"     ,    "for"     ,   "with"  ,    
+      "about"  ,    "against" ,   "between"  ,  "into",      
+      "through" ,   "during" ,    "before" ,    "after",     
+      "above"    ,  "below"   ,   "to"     ,    "from"  ,    
+      "up"     ,    "down"   ,    "in"     ,    "out"    ,   
+      "on"      ,  "off"    ,    "over"     ,  "under"    , 
+      "again"  ,    "further"  ,  "then"    ,   "once"    ,  
+      "here"    ,   "there", "other"  ,"some"   ,    "such" ,
+      "nor"    ,    "not"     ,   "only"  ,  "own"   ,     "same"   ,  
+      "so"    ,     "than"  ,"too"    ,    "very", "like"), removepunctuation=TRUE, stem=TRUE)
+      
+out <- prepDocuments(processed$documents, processed$vocab, processed$meta)
+docs <- out$documents
+vocab <- out$vocab
+meta <-out$meta
+
+
+# STM.covariates <- stm(documents = out$documents, vocab = out$vocab,
+#                 K = 4, prevalence = ~meta$lnGDPPC,
+#                 max.em.its = 100, data = out$meta,
+#                 init.type = "Spectral")
+
+# saveRDS(STM.covariates, "STMcovariates.RDS")
+STM.covariates <- readRDS("STMcovariates.RDS")
+labelTopics(STM.covariates, topics=NULL, n = 6, frexweight = 0.75)
+
+#Figure 5a
+plot(STM.covariates, type = "summary", xlim = c(0, 1.3), n=5, cex=0.5, topic.names=c("Topic 4 - Changing products:", "Topic 2 - Taxes:", "Topic 1 - No harm:", "Topic 3 - Ecosystems:"))
+```
+
+
+```{r}
+#regression tables associated with cross-national STM results
+
+prep <- estimateEffect(1:4~ lnGDPPC, STM.covariates,  meta = out$meta, uncertainty = "Global")
+summary(prep, topics = 1)
+summary(prep, topics = 2)
+summary(prep, topics = 3)
+summary(prep, topics = 4) 
+
+
+##Figure 5b
+
+plot(prep, covariate = "lnGDPPC", topics = c(3, 2, 4, 1),
+     model = STM.covariates, method = "difference", cov.value1 = "1",
+     cov.value2 = "0",
+     xlab = "Low Income ... High Income",
+     main = "Marginal Effect of log(GDPpc)" , xlim=c(-0.12, 0.12),
+     labeltype = "custom", custom.labels = c("Topic 1: No harm", "Topic 2: Taxes", "Topic 3: \n Ecosystems", "Topic 4: Changing products"))
+```
+
+
+```{r}
+##Figure 6
+#USA STMs; including associated regression tables and representative responses
+
+data<-read.csv("USAstm.csv", header=TRUE)
+
+processed <- textProcessor(data$harmpersonal, metadata = data, customstopwords = 
+                             c("i", "me", "my" , "myself", "we", "our", "ours", 
+      "ourselves", "you" ,       "your"     ,  "yours"  ,    "yourself" , 
+      "yourselves", "he", "him" ,"his", "himself" ,"she", "her", "hers",     
+      "herself" ,   "it",      "its"     ,   "itself"    ,
+      "they" ,      "them"  ,     "their"  ,    "theirs"  ,  
+      "themselves" ,"what"   ,    "which" ,     "who"       ,
+      "whom"     ,  "this"    ,   "that"   ,    "these"     ,
+      "those"   ,   "am"       ,  "is"     ,    "are"       ,
+      "was"  ,      "were"      , "be" ,        "been"      ,
+      "being"  ,    "have"  ,     "has"  ,      "had"       ,
+      "having" ,    "do"    ,     "does" ,      "did"       ,
+      "doing"   ,   "would" ,     "should"   ,  "could"     ,
+      "ought" ,     "i'm"    ,    "you're" ,    "he's"    ,  
+      "she's"   ,   "it's"    ,   "we're"    ,  "they're"   ,
+      "i've" ,   "you've" ,    "we've"    ,  "they've"   ,
+      "i'd"   ,     "you'd"  , "he'd"   ,    "she'd"     ,
+      "we'd"  ,     "they'd"   ,  "i'll"    ,   "you'll" ,    
+      "he'll"  ,    "she'll"    , "we'll"  ,    "they'll"  ,  
+      "isn't"   ,   "aren't" ,    "wasn't"  ,   "weren't"  , 
+      "hasn't" ,    "haven't" ,   "hadn't" ,    "doesn't"  , 
+      "didn't"   ,  
+      "shan't"  ,   "shouldn't" , "can't"    ,  "cannot"   , 
+      "couldn't" ,  "mustn't",    "let's"     , "that's" ,
+      "who's"   ,   "what's"   ,  "here's"  ,   "there's"  , 
+      "when's" ,    "where's",    "why's"  ,    "how's"     ,
+      "a"      ,    "an"   ,      "the"    ,    "and"  ,     
+      "but"    ,    "if"    ,     "or"     ,    "because",   
+      "as"     ,    "until"  ,    "while"  ,    "of"   ,     
+      "at"     ,    "by"     ,    "for"     ,   "with"  ,    
+      "about"  ,    "against" ,   "between"  ,  "into",      
+      "through" ,   "during" ,    "before" ,    "after",     
+      "above"    ,  "below"   ,   "to"     ,    "from"  ,    
+      "up"     ,    "down"   ,    "in"     ,    "out"    ,   
+      "on"      ,  "off"    ,    "over"     ,  "under"    , 
+      "again"  ,    "further"  ,  "then"    ,   "once"    ,  
+      "here"    ,   "there", "other"  ,"some"   ,    "such" ,
+      "nor"    ,    "not"     ,   "only"  ,  "own"   ,     "same"   ,  
+      "so"    ,     "than"  ,"too"    ,    "very", "like"), removepunctuation=TRUE, stem=TRUE)
+out <- prepDocuments(processed$documents, processed$vocab, processed$meta)
+docs <- out$documents
+vocab <- out$vocab
+meta <-out$meta
+
+
+#STM.covariates <- stm(documents = out$documents, vocab = out$vocab,
+#                K = 6, prevalence = ~meta$female + meta$edu + meta$hhincome + meta$pid1,
+#                max.em.its = 100, data = out$meta,
+#               init.type = "Spectral")
+
+# saveRDS(STM.covariates, "STMcovariates_us.RDS")
+
+STM.covariates_us <- readRDS("STMcovariates_us.RDS")
+labelTopics(STM.covariates_us, topics=NULL, n = 6, frexweight = 0.75)
+
+#Figure 6a
+plot(STM.covariates_us, type = "summary", xlim = c(0, 0.8), n=5, topic.names=c("Topic 1 - No harm:", "Topic 5 - Random effects:", "Topic 6 - Weather patterns:", "Topic 2 -  Rising costs:", "Topic 3 - Actions:",  "Topic 4 - Knock on effects:"))
+
+
+meta$harmpersonal<-as.character(meta$harmpersonal)
+```
+
+
+```{r}
+#Representative responses for the "rising costs" topic
+thoughts4 <- findThoughts(STM.covariates_us, texts = meta$harmpersonal, n = 5,
+                          topics = 4)$docs[[1]]
+
+thoughts4
+```
+
+
+```{r}
+prep <- estimateEffect(1:6~ female + pid1 + hhincome + edu, STM.covariates_us,  meta = out$meta, uncertainty = "Global")
+summary(prep, topics = 1)
+summary(prep, topics = 2)
+summary(prep, topics = 3)
+summary(prep, topics = 4)
+summary(prep, topics = 5)
+summary(prep, topics = 6)
+```
+
+
+```{r}
+#Figure 6b
+
+plot(prep, covariate = "female", topics = c(1, 4, 5, 3, 6, 2),
+     model = STM.covariates, method = "difference", cov.value1 = "1",
+     cov.value2 = "0",
+     xlab = "Male ... Female",
+     main = "Marginal Effect of Gender", xlim = c(-0.3, 0.3) ,
+     labeltype = "custom", custom.labels = c("Topic 1: No harm", "Topic 2: Rising costs", "Topic 3: Actions", "Topic 4: Knock on effects", 
+                                          "Topic 5: Random effects", "Topic 6: Weather patterns"))
+```
+
+
+```{r}
+##Figure 7
+##Netquest women's rights correlations 
+
+all_country<-read.csv("NetquestWomensRights.csv")
+
+#women's rights for men
+cor.test(log(all_country$GDP), all_country$wr_corrM,) #corr = 0.865, p =0.001
+plot(log(all_country$GDP), all_country$wr_corrM, xlim=c(8.75,11.2), xlab="GDP per capita (logged)", ylab="Correlation between Support for Women's Rights and Climate Concern" ) + text(log(all_country$GDP),all_country$wr_corrM, labels=all_country$country, pos=4, cex=0.9, font=2, adj=0)
+
+
+
+```
+

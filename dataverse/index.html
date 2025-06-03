@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <!--Required meta tags-->
+    <title>DATAVERSE</title>
+    <meta name='robots' content='max-image-preview:large'/>
+    <link rel="icon" type="image/png" sizes="16x16" href="../favicon-16x16.png">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inconsolata">
+    <link rel="stylesheet" href = "../style.css">
+    <meta charset="UTF-8">
+    <meta name="description" content="한성대학교 최천근 교수">
+    <meta name="keywords" content="최천근, 교수, 한성대학교, Hansung University">
+    <meta name="author" content="최천근"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">       
+    <link rel='stylesheet' id='wp-block-library-css' href='../style.min.css?ver=6.7.1' media='all'/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" id='aos-css-css' href="https://unpkg.com/aos@next/dist/aos.css" media='all'/>
+    <link rel='stylesheet' id='bootstrap-css-css' href='../bootstrap.css?ver=6.7.1' media='all'/>    
+    <style>
+        img:is([sizes="auto" i], [sizes^="auto," i]) {
+            contain-intrinsic-size: 3000px 1500px
+        }
+    </style>   
+        
+</head>
+<body>
+<!-- Links (sit on top) -->
+
+<div class="main-head">
+    <div class="main-head-parent">
+        <div class="w3-top">
+            <div class="w3-row w3-padding w3-white">
+                <div class="w3-col s3">
+                    <a href="../" class="w3-button w3-block w3-white">HOME</a>
+                </div>
+                <div class="w3-col s3">
+                    <a href="../research/" class="w3-button w3-block w3-white">RESEARCH</a>                  
+                </div>
+                <div class="w3-col s3">
+                    <a href="../dataverse" class="w3-button w3-block w3-white">DATAVERSE</a>
+                </div>
+                <div class="w3-col s3">
+                    <a target="_blank" href="../cv.pdf" class="w3-button w3-block w3-white">CV</a>
+                </div> 
+            </div>
+        </div>
+    </div>
+</div>
+
+<main>
+    <div class="breadcrumb_outtr">
+        <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="../">Home</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">Dataverse</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    <div class="inner_pagee">
+        <div class="panel_data_mthd cmn-gap cmn-gap-border-inner">
+            <div class="container">
+                <div class="cmn_hdngg new">
+                    <div class="cmn_hdngg_headd">
+                        <h2>
+                            Dataverse<span>.</span>
+                        </h2>
+                    </div>
+                    <p>과학은 지난 5년간 엄청난 발전을 이루었다. 사회과학에서도 지난 5년간의 발전은 지난 50년간의 발전을 뛰어넘는다. 특히, 양적 연구방법의 발전은 다양한 형태로 진화되고 있다.
+                    10년전만 하더라도 "회귀분석"이라고 하면 엄청난 과학적 방법론으로 여겨졌고, 이를 따라하기 위해 STATA, SAS, SPSS 등의 통계패키지를 많은 비용을 지불하고 배웠다.</p>
+                    <p>
+                    하지만, 지금은 오픈 소스 code가 널려있고, 그것을 실행할 수 있는 Python, R 등의 통계 패키지가 활용되고 있다.</p>
+                    <p>최근 서구에서는 'Dataverse'라는 신조어를 만들어내면서 학술논문을 학술지에 게재하기 위해서는 'Replication'이 가능하도록 코드와 데이터를 공개하는 추세이다.
+                    이러한 추세는 우리나라에도 곧 닥치게 될 것이다. </p>
+                    <p>
+                    연구자는 연구자의 연구물만이라도 공개되고 Replication 될 수 있기를 바라는 마음에서 최근 연구물의 자료와 코드를 공개하고자 한다.</p>
+                    <p>이러한 노력이 행정학, 나아가 한국의 사회과학에 조금이라도 기여할 수 있기를 바라는 마음이다. </p>
+                </div>
+                <section class="othrr_mthd cmn-gap cmn-gap-border-inner" id="panel-data-methods">
+                    <div class="sub_haeding_mn sft">
+                        <div class="menu_scrll"></div>
+                        <h3>양적 분석방법</h3>
+                    </div>
+                    <div class="row panel_data_mthd_row gx-3 gy-4">
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">KSEI</h4>
+                                <figure class="main_imgg">
+                                    <img src="ksei.png" alt="KSEI" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>KSEI </code>
+                                    Ganzeboom et al.(1992)은 ISCO(국제표준직업분류)의 4digit 세부 직업별로 사회경제적지위지수(ISEI)를 개발하였다. 그 이후, ISEI는 다양한 학문분야에서 활용되었으며, 특히 세계 여러국가들간의 비교에도 많이 활용되었다.
+                                    한국통계청에서도 ISCO 분류표를 원용하여 KSCO(한국표준직업분류)를 개발하였고, 이를 바탕으로 다양한 통계조사에서 개인의 직업을 분류하는데 활용되었다. 연구자는 Ganzeboom et al.(1992)의 기본모형(위 그림)을 원용하여 KSCO분류의 직업별 사회경제적지위 지수를 개발하였다.
+                                    이 지수에 의하면, 한국에서 사회경제적지위가 가장 높은 직업은 KSCO 중분류 "141"에 해당하였다. 여기서는, R 프로그래밍 getSei.R script를 공유한다. 다양한 방면에서 활용가능할 수 있기를 기대한다.
+                                    </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="getSei.R" target="_blank" >
+                                                <span>getSei.R</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                                                                                             
+                                    </ul>
+                                </div>
+                            </div>
+                        </div> 
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Working Paper2</h4>
+                                <figure class="main_imgg">
+                                    <img src="jobsatByGender.png" alt="Working Paper2" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Working Paper1 </code>
+                                    직군별 직무만족의 남녀 차이에 대한 실태를 분석한다. 직군은 크게, "사기업", "공기업", "경찰", "교육직", "일반직"으로 구분한다.
+                                    전체적으로는, 여성이 남성에 비해 직무에 만족하는 것으로 나타났다. 하지만, 직군별로 살펴보면, 그 차이는 다른 양상을 보이고 있다.                                    
+                                    </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="" target="_blank" >
+                                                <span>Replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                                                                                             
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>  
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Working Paper1</h4>
+                                <figure class="main_imgg">
+                                    <img src="compst.png" alt="Working Paper1" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Working Paper2 </code>
+                                    고령화와 더불어 퇴직후 진로에 대해 고민하는 사람들이 많다. 
+                                    공무원, 군인, 경찰, 소방, 우정 등 특수직역 연금가입자들도 예외가 아니다.
+                                    26년간의 노동패널데이터를 바탕으로, 특수직역 연금가입자 중에서 2000년부터 2022년까지 퇴직한 사람은 총122명으로 나타났다.
+                                    노동패널에 등장하는 총4만명 중에서 약122명이 특수직역 연금가입자로 퇴직한 것이다.
+                                    연구자는 122명이 1년후에 어떤 상태에 있는지를 연구하고 있다.
+                                    그 기초데이터를 바탕으로, 1년후의 종사상 지위를 분석한 것을 그래프로 제시하였다.
+                                    122명 중에서 상용직으로 이동한 경우가 12명, 임시직으로 12명, 일용직으로 3명, 고용주나 자영업자로 9명, 무급가족종사자로 1명으로 나타났다.
+                                    이를 바탕으로, 퇴직 1년후에 취업을 하거나 그렇지 않은 경우를 결정하는 요인이 무엇인지에 대해 보다 심도있는 연구를 진행할 필요가 있다.
+                                    </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="" target="_blank" >
+                                                <span>Replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                                                                                             
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>           
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Blinder-Oaxaca Decomposition </h4>
+                                <figure class="main_imgg">
+                                    <img src="oaxaca.png" alt="Blinder-Oaxaca Decomposition" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Blinder-Oaxaca Decomposition</code>
+                                    Blinder-Oaxaca 분해방법은 노동 시장 차별에 대한 연구에서 시작되었다(Blinder 1973; Oaxaca 1973). 
+                                    예를 들어 경제학자와 사회학자들은 성별(예: Stanley and Jarrell 1998; Weichselbaumer and Winter-Ebmer 2005)과 인종(예: Darity, Guilkey, and Winfrey 1996; Kim 2010)에 따른 임금 및 소득 차이를 분해하였다. 
+                                    행정학자들은 아시아계 결혼이주여성들의 국적에 따른 임금차별에 대해 분석하였다(김민길 등, 2017). Blinder-Oaxaca 분해는 차별에 대한 경험적 연구 뿐만 아니라, 두 집단 간의 연속적인 결과의 차이를 설명하는 데 적용될 수 있다. 
+                                    예를 들어, 연구자들은 이를 사용하여 이민자의 동화(LaLonde & Topel, 1992), 학교 등록률(Borooah & Iyer, 2006), 건강 보험 적용 범위(Bustamante, Fang, Rizzo & Ortega, 2009), 흡연 유병률(Bauer, Göhlmann & Sinning, 2007), 지역 사냥 임대료(Munn & Hussain, 2010)에 대한 연구로 확장되었다.
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="oaxaca.R" target="_blank" >
+                                                <span>Replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/N3RPNR" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li>       
+                                        <li>
+                                            <a href="oaxaca.pdf" target="_blank" >
+                                                <span>Tutorial</span>
+                                            </a>
+                                        </li>                                                                                                                                                         
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Multilevel Modeling </h4>
+                                <figure class="main_imgg">
+                                    <img src="mm.png" alt="multilevel modeling " width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Multilevel Modeling </code>
+                                    (또는 hierarchical linear modeling 위계적 선형모형)은 클러스터 내 종속성을 모델링하도록 설계되었다. 
+                                    그런데, 그룹 수가 적거나 모델에 다양한 계수나 비중첩 구성 요소가 많이 포함된 경우 ML 접근 방식은 부분적으로 분산 매개변수를 정확하게 추정하기에 충분한 정보가 없기 때문에 제대로 작동하지 않을 수 있다.
+                                    이러한 경우 Restricted Maximum Likelihood(REML) 추정은 더 합리적인 추론을 제공한다. 나아가, 완전한 베이지안 접근 방식도 이러한 경우에 합리적인 추론을 제공하며, 다양한 절편과 기울기를 예측할 때 매개변수 추정치의 모든 불확실성과 관련 불확실성을 고려할 수 있다.
+                                    여기서는, AJPA(2018) 논문을 Replication 한다. 다양한 OLS, logit, ordered logit 모형에 대한 분석과 결과도 함께 확인할 수 있다.
+
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="narcissism_analysis.R" target="_blank" >
+                                                <span>Replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/9IKGYY" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/ajps.12380?casa_token=Cfx8CLLopBMAAAAA%3AVAGgEHLRkCiJtMgLzpasK64i_YpjiKB3hpG-6gzbL8dCHFYPm3A8nVA4iR4sgsNnnleQ3y9uh8hDnGE" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>      
+                                        <li>
+                                            <a href="https://mc-stan.org/learn-stan/case-studies/tutorial_rstanarm.html" target="_blank" >
+                                                <span>rstan Tutorial</span>
+                                            </a>
+                                        </li>                                                                                                                                                         
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>    
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">No Individual Identifiers in Panel Data </h4>
+                                <figure class="main_imgg">
+                                    <img src="noid.png" alt="No Individual Identifiers in Panel Data " width="100%">
+                                </figure>
+                                    <p>
+                                    <code>No Individual Identifiers in Panel Data </code>
+                                    패널조사에 있어서 응답자를 여러 wave에 걸쳐 연결하는 개별 식별자가 없는 경우가 있다(Yackee 및 Yackee 2021). 
+                                    이러한 경우, 활용할 수 있는 방법이 Geys(2023)와 Murdoch et al.(2019)가 개발한 경험적 전략을 채택할 수 있다. 
+                                    간단히 말하면, 응답자들의 특성 변수(성별, 나이, 근무연한, 주소지, 학력, 계급 등등)들을 함께 만족하는 경우는 많지 않다는 점을 고려하여, 매칭하는 기법이라 할 수 있다.
+                                    여기서는, Geys, B., Lægreid, P., Murdoch, Z., & Yackee, S. W. (2024). I’ma Survivor: Political Dynamics in Bureaucratic Elites’ Partisan Identification. American Political Science Review, 1-15.
+                                    의 논문에서 활용한 Simulation 방법을 Replication하고자 한다.
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="noid.R" target="_blank" >
+                                                <span>Replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/OO6RB0" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://www.cambridge.org/core/journals/american-political-science-review/article/im-a-survivor-political-dynamics-in-bureaucratic-elites-partisan-identification/DD351EF101B469050EB26720ACB88746" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                                                                                            
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                            
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">LATE & 2SLS</h4>
+                                <figure class="main_imgg">
+                                    <img src="late2sls.png" alt = "LATE & 2SLS" width="100%">
+                                </figure>
+                                <p>
+                                    <code>LATE & 2SLS</code>
+                                    지역 평균 처치 효과(LATE)는 준수자 평균 인과 효과(CACE)라고도 하며, 샘플 그룹에 할당된 실험적 처치를 준수하는 피험자에 대한 치료 효과이다. 
+                                    준수자와 비준수자를 모두 포함하는 평균 처치 효과(ATE)와 다르다. 
+                                    ATE와 유사하게 LATE는 계산되지만 비준수 당사자는 포함되지 않는다. 
+                                    연구 목표가 준수하는 피험자에서 처치 효과를 평가하는 것이라면 LATE 값은 더 정확한 추정치를 제공한다. 
+                                    그러나 처치 방법의 실제 배치에서 발생할 가능성이 있는 비준수 효과를 무시하여 외부 타당성이 부족할 수 있다. 
+                                    사회과학에서는, LATE를 도구 변수 추정기(2SLS)를 통해 추정할 수 있다. 여기서는 APSR(2024)의 논문을 통해, 2SLS 방법을 활용한 LATE 추정방법을 Replication 하고자 한다.
+                                </p>
+                                    <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="late2sls.R" target="_blank">
+                                                <span>R code</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/EWXQQH" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://static1.squarespace.com/static/594859be72af6521f2aef7a5/t/663b92799d8c5552beab0c90/1715180154764/The_American_Viewer_APSR_Kim+and+Patterson.pdf" target="_blank">
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Event history analysis</h4>
+                                <figure class="main_imgg">
+                                    <img src="diffusion.png" alt="Event history analysis" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Event history analysis</code>
+                                    Berry와 Berry(1990)가 정부 정책 채택의 내부적, 외부적 결정 요인을 모두 테스트하는 수단으로 사건 이력 분석을 도입한 이래로, 그들의 접근 방식을 따라하는 많은 수의 연구가 이루어졌다(Mallinson, 2021).
+                                    한편, Mallinson(2016)은 채택 여부를 나타내는 이분형 측정 방식이 채택 속도(fast or slow)의 점진적 변화 가능성을 약화시킬 뿐만 아니라 정책 확산 데이터에서 흔히 발생하는 우측 절단을 제대로 설명하지 못한다고 주장했다.
+                                    이에 따라, Adoption Speed를 측정하기 위한 다양한 노력이 이루어졌다. Nicholson-Crotty(2009), Mallinson(2016)의 측정방법이 그것이다.
+                                    여기서는, PSR(2022) 연구를 Replication 한다.
+
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="Diffusion.R" target="_blank" >
+                                                <span>Replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://journals.sagepub.com/doi/full/10.1177/14789299211052828?casa_token=b-SU9MGgxuoAAAAA%3ALebSB5-B2Rv22_UW7Kuq25PxYXM72OV5q0trgm8WRzS2sPdvj1rmsJBHffGDMTtoJ3AJZX-AApKpaA" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://academic.oup.com/jpart/article/26/1/159/2614437" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                                                                                             
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                        
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Survival Analysis</h4>
+                                <figure class="main_imgg">
+                                    <img src="survival.jpg" alt="Survival Analysis" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Survival Analysis</code>
+                                    생존분석은 생존에 영향을 미치는 요인을 분석하는데 활용된다. 즉, 종속변수는 시간-사건 데이터에서 생존 여부가 된다. 시간-사건 데이터 분석중에서도 생존분석은 censoring(절단)을 그 특징으로 한다.
+                                    여기서는, JPART(2016) 논문을 Replication한다.
+                                    이 연구의 종속 변수는 오른쪽 절단이 있는 연도 단위의 기간으로, 일부 기관은 관찰 기간이 끝날 때에도 여전히 살아있다.
+                                    이런 종류의 종속 변수에 대한 적절한 통계적 모델이 바로 생존 모델이다. 
+                                    모수적 및 비모수적 생존 모델이 모두 사용 가능하며 일부 연구자는 기본 위험 함수(Carpenter and Lewis 2004)에 대한 이론적으로 알려진 모수적 분포를 주장하기도 한다. 
+                                    하지만, 기본위험 함수에 대한 지식이 부족하다면, semi-parametric model인 콕스 회귀 모델(Cox regression model)을 활용할 수 있다.
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="survival.Rmd" target="_blank" >
+                                                <span>Replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/HNFYY0" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://academic.oup.com/jpart/article/26/1/159/2614437" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                        <li>
+                                            <a href="https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html" target="_blank" >
+                                                <span>Survival Analysis Tutorial</span>
+                                            </a>
+                                        </li>                                         
+                                    </ul>
+                                </div>
+                            </div>
+                        </div> 
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Regression Discontinuity</h4>
+                                <figure class="main_imgg">
+                                    <img src="rd.png" alt="Regression Discontinuity" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Regression Discontinuity</code>
+                                    회귀 불연속 설계(RDD)는 할당 변수(실행 변수라고도 함)의 컷오프 또는 임계값에 의해 결정되는 집단 할당이 있을 때 인과 효과를 추정하는 데 사용되는 통계적 방법이다. 
+                                    무작위화가 실행 가능하지 않은 준실험 설계에서 일반적으로 사용된다. 여기서는, AJPS(2024)의 논문을 Replication 한다. 
+                                    이 연구에서는 주택 정책에 대한 다양한 정당의 도시 지도자를 선출하는 효과를 파악하기 위해 RDD를 사용한다.
+                                    두 정당의 투표 점유율에서 50%라는 임계값이 어느 정당이 선거에서 이길지를 결정한다는 사실을 이용한다.
+                                    이를 통해, 공화당이 아닌 민주당 시의원이나 시장을 선출하는 것이 지역 주택 정책에 미치는 인과 효과를 분리할 수 있다. 
+                                    RD 설계의 타당성은 단위의 잠재적 결과 분포가 아닌 승리한 후보만이 임계값에서 불연속적으로 변한다는 가정에 달려 있다(Hahn, Todd, and Klaauw, 2001; Lee and Lemieux, 2010). 
+                                    이 가정의 타당성을 확인하는 방법은 McCrary 검정을 사용하거나, Cattaneo et al.(2019)의 비모수 검정 방식(rddensity)을 사용할 수 있다.
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="rd.Rmd" target="_blank" >
+                                                <span>Replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/TEPRY2" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/ajps.12856" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div> 
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Structural Equation Modeling</h4>
+                                <figure class="main_imgg">
+                                    <img src="sem.png" alt="Structural Equation Modeling" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Structural Equation Modeling</code>
+                                    구조 방정식 모델링은 잠재 변수가 있는 동시 회귀 방정식을 모두 모델링하는 선형 모델 프레임워크이다.
+                                    선형 회귀, 다변량 회귀, 경로 분석, 확인적 요인 분석, 구조적 회귀와 같은 모델은 SEM의 특수한 경우이다. 
+                                    SEM에서 가능한 관계는 다음과 같습니다. (1) 관찰 변수에서 관찰 변수로 (회귀분석), (2) 잠재 변수에서 관찰 변수로 (확인적 요인 분석), (3) 잠재 변수에서 잠재 변수로 (구조적 회귀).
+                                    SEM은 측정 모델과 구조적 모델을 모두 포함한다. 
+                                    측정 모델은 관찰 변수와 잠재 변수를 연결하고 구조적 모델은 잠재 변수와 잠재 변수를 연결한다. 
+                                    현재 Mplus, EQS, SAS PROC CALIS, Stata의 sem소프트웨어를 활용할 수 있다. 여기서는 R의 lavaan 소프트웨어 프로그램을 활용하여 
+                                    SEM 모델을 처리한다. 이것의 장점은 오픈 소스이고 무료로 사용할 수 있으며, 비교적 사용하기 쉽다. 
+                                    또한, 여기서는 Ozdemir & Jacob(2021) 연구를 Replication 한다.
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="SEM.Rmd" target="_blank" >
+                                                <span>Replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/38PV7N" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/spsr.12499" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>   
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Inferential Network Analysis</h4>
+                                <figure class="main_imgg">
+                                    <img src="network.png" alt="Inferential Network Analysis" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Inferential Network Analysis</code>
+                                    지난 10년 동안 네트워크 데이터 분석을 위한 통계 기법이 상당히 발전했으며, 이러한 도구가 사용되는 빈도도 크게 증가했다.
+                                    이러한 기법은 상호 의존성이 높은 관계가 있는 상황에서 통계적으로 유효한 추론이라는 동일한 광범위한 목표를 달성하도록 설계되었지만, 이들 간에는 여전히 중요한 차이점이 있다.
+                                    Cranmer et al.(2017)은 추론 네트워크 분석에 일반적으로 사용되는 세 가지 접근 방식(quadratic assignment procedure(QAD), Exponential Random Graph Models(ERGM),  latent space network models(LSM))을 검토하여 이러한 기법의 강점과 약점을 서로 비교하여 설명하였다. 
+                                    여기서는 Cranmer et al.(2017)의 연구를 Replication 한다. 
+                                    그들은 네트워크 구조에 대한 단순한 기술적 측정을 넘어서는 네트워크 기법을 소개하고, 연구자들이 자신의 연구에 사용할 모델을 어떻게 선택하는지에 도움을 준다.
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="Network_Manual.Rmd" target="_blank" >
+                                                <span>Replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/2XP8YF" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://onlinelibrary.wiley.com/doi/full/10.1111/ajps.12263?casa_token=TqMX8L2fTKYAAAAA%3AaB-2JZ22K82RkrHlex93A84dVo_j6OPuqB3RILp5Rqd8-Ic6ff1oWt3BDdwaMgJmZ7hanvMVN8VJvZE" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                           
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Anchoring Vignettes</h4>
+                                <figure class="main_imgg">
+                                    <img src="anchoring.png" alt="Anchoring Vignettes" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Anchoring Vignettes</code>
+                                    이는 설문 조사 연구자가 개인 간 비교가 불가능한 설문 응답을 수정하는 데 사용할 수 있는 가상의 사람이나 상황에 대한 일반적으로 간략한 설문 방식이다.
+                                    설문 조사 질문은 측정되는 실제 양과 개인 간 비교 불가능성(즉, 응답자마다 다름)의 함수이다. 
+                                    설문 조사 문헌은 수십 년 동안 비교할 수 없는 부분을 줄이기 위한 보다 구체적인 질문을 하는 데 집중했지만 성공하지는 못했다.
+                                    앵커링 비네트의 근간이 되는 새로운 아이디어는 비교할 수 없는 부분을 직접 측정한 다음 빼는 것이다.
+                                    이를 위해 응답자에게 앵커링 비네트에 설명된 여러 가상 개인 각각에 대한 동일한 척도로 평가와 함께 측정되는 개념에 대한 자기 평가를 요청한다.
+                                    비네트에 나오는 사람들의 실제(반드시 보고되지는 않음) 수준은 설문 조사 설계상 응답자에 따라 불변하므로 비네트에 대한 답변이 응답자에 따라 다른 유일한 이유는 개인 간 비교 불가능성 때문이다. 
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="Vignettes.Rmd" target="_blank" >
+                                                <span>replication code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://gking.harvard.edu/vign" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://econtent.hogrefe.com/doi/abs/10.1027/1015-5759/a000336?journalCode=jpa" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                        
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Regularized Regression</h4>
+                                <figure class="main_imgg">
+                                    <img src="regular.png" alt="Regularized Regression" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Regularized Regression</code>
+                                    상관관계가 있는 독립변수의 문제는 약한 정보의 prior 또는 정규화를 통해 분산을 줄이는데 도움된다. 
+                                    즉, 정규화(Ridge, LASSO, Elastic Net)는 높은 상관관계를 가진 데이터를 활용한 통계적 추정치를 개선할 수 있다.
+                                    그러나 모든 정규화 절차는 데이터 생성 프로세스에 대한 가정을 포함하며, 이러한 가정이 성립할 수 없는 경우 반직관적인 결과를 초래할 수 있다.
+                                    정규화가 단순히 분산 추정치를 축소시키는 것이 아니라 인과 경로의 뒷문을 다시 열어 일부 효과의 추정치를 부풀리고 잘못된 상황에서는 방향을 반전시킬 수 있다.
+                                    다시 말해, 지나치게 강력한 페널티 항을 사용하면 정규화는 정규화되지 않은 추정치로 공변량 조정에 의해 차단된 뒷문 인과 경로를 통해 교란을 다시 도입할 수 있다는 것이다.
+                                    Jonathan & Christopher(2024)는 베이지안 사전 확률을 직접 사용하거나 빈도주의적 정규화 회귀의 암묵적 가정을 사전 확률로 변환하여 그 타당성과 영향을 평가할 것을 제안한다.
+                                </p>                                    
+                                    <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/VEFZXI" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://www.cambridge.org/core/journals/american-political-science-review/article/regularized-regression-can-reintroduce-backdoor-confounding-the-case-of-mass-polarization/3806AC4212AE06432DA309F07890C486" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                        
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Randomization Inference</h4>
+                                <figure class="main_imgg">
+                                    <img src="ri.png" alt="Randomization Inference" width="70%">
+                                </figure>
+                                <p>
+                                    <code>Randomization Inference</code>
+                                    무작위 추론은 무효과의 귀무가설을 날카롭게 검증하고, 점 추정치 주변의 불확실성을 추정하는 것이다(Fisher 1935; Rubin 1990; Erikson, Pinto, and Rader 2010, 2014). 
+                                    장기간의 역사적 관측치에서 추정된 ATE는 무효과의 날카로운 귀무가설 하에서 추정된 ATE의 샘플링 분포와 비교된다(Gerberand Green 2012, p.62).
+                                    명확한 귀무가설에 따른 추정 ATE의 표본 분포는 과거 역사적 분포에서 무작위로 추출한 자료를 기반으로 한다. 
+                                    수십 년 분의 글로벌 데이터에 대한 접근으로, 연구자는 이 무작위 추론기법을 날씨, 사회 경제, 공중 보건, 폭력과 같은 다양한 지역의 데이터 소스에 사용할 수 있다. 
+                                    또한, 날씨 지표와 자연적 위험(예: 강수량, 기온, 바람, 화재 또는 화산 폭발로 인한 공기 입자)과 같은 재해는 공간적으로 클러스터링된다.
+                                </p>                                    
+                                    <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="cooperman_ri.R" target="_blank">
+                                                <span>Replication Code</span>
+                                            </a>
+                                        </li>                                                                             
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/RJF61A" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://www.cambridge.org/core/journals/political-analysis/article/abs/randomization-inference-with-rainfall-data-using-historical-weather-patterns-for-variance-estimation/2F86BE9EB79FDFF9FF97C8C5CC4A2ED3" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Heterogeneous Effect</h4>
+                                <figure class="main_imgg">
+                                    <img src="hetero.png" alt="Heterogeneous Effect" width="70%">
+                                </figure>
+                                    <p>
+                                    <code>Heterogeneous Effect</code>
+                                    연구자는 베이지안 LASSO 절차를 사용하여 데이터에 과적합되는 것을 피하기 위해 종속변수에 대한 독립변수의 이질적 효과의 가능성을 추정할 수 있다.
+                                    기본적으로 이 베이지안 버전의 LASSO는 계수에 대한 이중 지수 사전 확률을 사용하여 작은 효과를 0으로 설정하고 큰 효과는 변경하지 않는다.
+                                    이 모델에서 연구자는 종속변수와 독립변수 간의 유연한 관계를 추정하기 위해 다른 통제변수와 상호 작용시킨다.
+                                    이 모델에는 이러한 변수의 모든 하위 순서 항도 포함된다.
+                                    연구자는 R 컴퓨팅 환경에서 sparsereg 패키지를 사용하여 이 절차를 구현할 수 있다.
+                                    결과에 따르면 인종적 분노에 대한 시위의 효과는 도시화가 매우 심한 지역에서 특히 두드러진다.
+                                </p>                                    
+                                    <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="heterogenous_effects.R" target="_blank">
+                                                <span>Replication Code</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="merged3.RDS" target="_blank">
+                                                <span>Replication Data</span>
+                                            </a>
+                                        </li>                                                                                  
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/RNMB1Q" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://www.cambridge.org/core/journals/political-analysis/article/abs/sparse-estimation-and-uncertainty-with-application-to-subgroup-analysis/2EBDD97D60DCCABA3CA4D341171B2D78" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div> 
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Mediation Effects</h4>
+                                <figure class="main_imgg">
+                                    <img src="mediation.png" alt="Mediation in r" width="70%">
+                                </figure>
+                                <p>
+                                    <code>Mediation Effects</code>
+                                    mediation은 모수적 및 비모수적 인과적 매개 분석을 모두 허용하는 R 패키지이다. Imai, Keele, and Yamamoto(2010)와 Imai, Keele, and Tingley(2010)의 방법과 제안을 구현한 것이다.
+                                    이 패키지는 2015년 PolMeth Statistical Software Award를 수상했다. 
+                                    이 소프트웨어는 인과적 매개 효과의 추정 외에도 연구자들이 특정 매개변수적 모델에 대한 민감도 분석을 수행할 수 있도록 한다.
+                                    제1단계: 기본모형(X->Y), 제2단계: 매개변수 회귀분석(X->M), 제3단계: 비모수 부트스트랩 또는 준베이지안 몬테카를로 근사법,
+                                    제4단계: summary(ACME, ADE, Total Effect), 제5단계: 그래프 그리기
+                                </p>                                    
+                                    <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="mediation-code.R" target="_blank">
+                                                <span>Replication Code</span>
+                                            </a>
+                                        </li>                                          
+                                        <li>
+                                            <a href="chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://imai.fas.harvard.edu/research/files/mediationR.pdf" target="_blank">
+                                                <span>Causal Mediation Vignetts</span>
+                                            </a>
+                                        </li>                                                                               
+                                        <li>
+                                            <a href="https://scholar.harvard.edu/dtingley/scholar_software/mediation" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://cran.r-project.org/web/packages/mediation/index.html" target="_blank" >
+                                                <span>Software package</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Sensitivity Test</h4>
+                                <figure class="main_imgg">
+                                    <img src="sensitivity.png" alt="Sensitivity Test" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Sensitivity Test</code>
+                                    정책효과에 대한 회귀분석에 있어서 선택편의(selection bias)는 항상 문제가 될 수 있다. 또한, 분석결과에 있어서 변수 조작화나 추가대안 설명(생략 변수 편의)도 문제될 수 있다.
+                                    이러한 추론에 대한 주요 위협은 종속변수와 주요 독립변수에 동시에 영향을 미치는 관찰할 수 없는 교란요인(confounds)이 있다는 것이다. 연구자는 관찰 가능한 가정에 대한 이러한 결과의
+                                    민감도를 평가하기 위해 Blackwell(2014)가 제시한 민감도 분석을 실시할 수 있다.
+                                    이 검정은 관찰할 수 없는 교란요인에 대한 ATT의 민감도를 평가하여 그러한 관찰 불가능한 요인이 추정된 효과 전체를 
+                                    설명하기 위해 얼마나 큰 효과가 있어야 하는지를 알려준다.
+                                </p>
+                                    <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="sensitivity.R" target="_blank">
+                                                <span>Replication Code</span>
+                                            </a>
+                                        </li>      
+                                        <li>
+                                            <a href="merged2.RDS" target="_blank">
+                                                <span>Replication Data</span>
+                                            </a>
+                                        </li>                                                                             
+                                        <li>
+                                            <a href="https://github.com/mattblackwell/causalsens" target="_blank">
+                                                <img src = "github.png" style="max-width:8%;height:auto;" alt="github">GitHUb</a>                                                                
+                                            </a>
+                                        </li>                                                                               
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/Q4IQGM" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://www.cambridge.org/core/journals/political-analysis/article/selection-bias-approach-to-sensitivity-analysis-for-causal-effects/788C169FAF5482452566811136D4F9B4" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                        
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">No Pretrend Test</h4>
+                                <figure class="main_imgg">
+                                    <img src="nopretrend.png" alt="No Pretrend Test" width="100%">
+                                </figure>
+                                <p>
+                                    <code>No Pretrend Test</code>
+                                    잠재적인 시간 가변 교란 요인이 순환적이거나 정책채택 시작 직전에 나타나지 않는 경우, placebo test에서 이를 포착하지 못할 수 있다.
+                                    이러한 상황에서는 사전 추세에 대한 보다 포괄적인 검정이 필요하다. 자연스러운 접근 방식은 모든 사전 정책채택 기간의 잔차 평균이 0인 귀무 가설 집합을 공동 검정하는 것이다. 즉, 모든 s ≤ 0에 대해 ATT = 0입니다. 
+                                    여기서도 F 검정과 TSOT 검정을 실시한다. 마찬가지로, 두 검정의 귀무가설은 다른 점에 유의하자.  
+                                </p>
+                                    <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="https://yiqingxu.org/packages/fect/fect.html" target="_blank">
+                                                <span>Replication Code & Vignette</span>
+                                            </a>
+                                        </li>                                          
+                                        <li>
+                                            <a href="https://github.com/xuyiqing/fect" target="_blank">
+                                                <img src = "github.png" style="max-width:8%;height:auto;" alt="github">GitHUb</a>                                                                
+                                            </a>
+                                        </li>                                                                               
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/ZVC9W5" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="dynamic.pdf" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                        
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">TSCS placebo test</h4>
+                                <figure class="main_imgg">
+                                    <img src="placebo.png" alt="TSCS placebo test" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>TSCS placebo test</code>
+                                    기본 아이디어는, 정책채택이 채택 그룹의 각 단위에 대해 실제 시작보다 S 기간 일찍 시작한다고 가정하고(Ci = 1) 동일한 반사실적 추정치를 적용하여 s = −(S − 1), . . . ,−1, 0에 대한 ATT 추정치를 얻는다. 또한 S 채택 전 기간에 대한 전체 ATT를 추정할 수 있다.
+                                    TECS 기본가정 1~3이 유지된다면 이 가짜 'ATT' 추정치의 크기는 0에 가까울 것으로 예상한다. 이 'ATT' 추정치가 통계적으로 0과 다르다면 식별 가정 중 일부 또는 전부가 유효하지 않을 가능성이 있다는 증거가 된다. 주요 test 는 F검증과 TSOT검증이 있다. 다만, 두 검증의 귀무가설은 다르다는 점을 유의하자.                                
+                                    </p>
+                                    <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="https://yiqingxu.org/packages/fect/fect.html" target="_blank">
+                                                <span>Replication Code & Vignette</span>
+                                            </a>
+                                        </li>                                          
+                                        <li>
+                                            <a href="https://github.com/xuyiqing/fect" target="_blank">
+                                                <img src = "github.png" style="max-width:8%;height:auto;" alt="github">GitHUb</a>                                                                
+                                            </a>
+                                        </li>                                                                               
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/ZVC9W5" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="dynamic.pdf" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div> 
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Dynamic Treatment Effects</h4>
+                                <figure class="main_imgg">
+                                    <img src="dynamic.png" alt="Dynamic Treatment Effects" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Dynamic Treatment Effects</code>
+                                    TSCS 데이터를 이용한 연구에서 연구자들은 종종 소위 '동적 치료 효과'를 그래프로 표시하는데, 이는 치료 지표와 치료 시작을 기준으로 한 기간 수(lag & lead)를 나타내는 더미 변수 집합 간의 상호 작용 항의 계수이다.예를 들어, s = −4,−3, . . . , 0, 1, . . . ,5이며, 여기서 s = 1은 단위가 치료를 받는 첫 번째 기간을 나타낸다.이때 단위 및 시간 FE를 통제한다. r package fect를 활용하여 쉽게 현출할 수 있다. 
+                                    제1단계: TSCS 시각화, 제2단계: Counterfactual Estimators(FEct, IFEct, MC)
+                                    제3단계: No Pre-trend 검증, 제4단계: Placebo test, (제5단계: Carryover Effects), (제6단계: cohort-wise estimation)
+                                    </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="https://github.com/xuyiqing/fect" target="_blank">
+                                                <img src = "github.png" style="max-width:8%;height:auto;" alt="github">GitHUb</a>                                                                
+                                            </a>
+                                        </li>                                                                               
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/ZVC9W5" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="dynamic.pdf" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="fect.R" target="_blank" >
+                                                <span>Replication R code</span>
+                                            </a>
+                                        </li>                                                                                                                           
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>     
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">SCMs</h4>
+                                <figure class="main_imgg">
+                                    <img src="scm.png" alt="NORM" width="100%">
+                                </figure>
+                                <p>
+                                    <code>SCMs</code>
+                                    Abadie와 Gardeazabal(2003) 및 Abadie et al.(2010)이 개발한 SCM은 처리 단위를 synthetic doppelganger country와 비교하여 정책 개입의 영향을 정량화할 수 있는 통계모형을 제공한다. SCM은 처리 그룹의 각 국가(포퓰리즘 사건을 경험한 국가)에 대한 합성 매치를 생성하고, "doner countries"(분석 대상 기간 동안 포퓰리즘 사건이 없는 국가) 풀을 활용하며, 포퓰리즘 사건 이전의 행동에서 유사성을 목표로 함으로써 내생성 문제를 해결한다. 이 방법은 합성 도플갱어가 포퓰리즘 정부가 선출되지 않았다면 포퓰리즘 국가가 따랐을 궤적을 따를 것이라고 가정한다. 
+                                </p>
+                                <div class="tag_part_cmmmn"> 
+                                    
+                                    <ul>
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/LUXWMV" target="_blank">
+                                                <span>Harvard Dataverse</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://onlinelibrary.wiley.com/doi/pdf/10.1111/ajps.12935" target="_blank">
+                                                <span>paper</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                               
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Synthetic Control Method</h4>
+                                <figure class="main_imgg">
+                                    <img src="synth.png" alt="Synthetic Control Method" width="80%">
+                                </figure>
+                                <p>
+                                    <code>Synthetic Control Method</code>
+                                    합성통제방법(Synthetic Control Method)는 비교사례 연구에서 어떤 정책개입이나 관심사건의 인과적 효과를 추정하도록 설계되었다(Abadie & Gardeazabal 2003; Abadie, Diamond & Hainmueller 2010).
+                                    이 방법은 특히 상위단위(즉, 국가, 도시, 지역 등)에서 발생하고 비교적 적은 수의 단위에 영향을 미치는 사건을 조사하는데 적합하다.
+                                    예컨대, 통일이 독일의 경제성장에 미치는 영향과 같은 연구이다. 특히, 2015년 1월 현재, Abadie et al.(2014) 연구는 3000회이상 인용된 논문이고, 하바드 데이터버스의 다운로드 기록은 6400회에 이른다.
+                                    small-N 비교사례 연구를 진행하는 연구자라면 반드시 읽고 학습할 필요가 있다. 구체적인 활용사례는 다음 SCMs를 참고하기 바란다.
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="synth.R" target="_blank" >
+                                                <span>Replication R code</span>
+                                            </a>
+                                        </li>                                                                                
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/24714" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://onlinelibrary.wiley.com/doi/10.1111/ajps.12116" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://www.jstatsoft.org/article/view/v042i13" target="_blank" >
+                                                <span>software paper</span>
+                                            </a>
+                                        </li>                                         
+                                                                                                                         
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                                        
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">PanelMatch</h4>
+                                <figure class="main_imgg">
+                                    <img src="match.png" alt="Matching" width="100%">
+                                </figure>
+                                <p>
+                                    <code>PanelMatch</code>
+                                    PanelMatch는 Imai, Kim, Wang(2021)이 제안한 방법론을 구현한 R 패키지로, 연구자들이 이진 처리가 있는 시계열 횡단면 데이터에서 인과적 추론을 위한 매칭 방법을 가능하게 한다. 이 패키지에는 성향 점수와 마할라노비스 거리를 기반으로 하는 매칭 방법과 가중치 방법의 구현이 포함된다. PanelMatch를 사용하면 표준 오차와 함께 다양한 관심 수량을 쉽게 계산할 수 있다. 이 소프트웨어는 유연하여 사용자가 많은 수의 매개변수로 매칭, 정제 및 추정 절차를 조정할 수 있다. 
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="panelmatch.R" target="_blank" >
+                                                <span>R code</span>
+                                            </a>
+                                        </li>   
+                                        <li>
+                                            <a href="https://github.com/insongkim/PanelMatch" target="_blank">
+                                                <img src = "github.png" style="max-width:8%;height:auto;" alt="github">GitHUb</a>                                                                
+                                            </a>
+                                        </li>                                                                               
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/ZTDHVE" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>  
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">DID & matching</h4>
+                                <figure class="main_imgg">
+                                    <img src="did.png" alt="DID & matching" width="100%">
+                                </figure>
+                                <p>
+                                    <code>DID & matching</code>
+                                    최근 5년간 정책학 분야에서 급속도로 발전한 방법론 중 하나가 DID 분석이다. DID분석은 정책 채택 집단과 그렇지 않은 집단의 비교를 통해 정책의 효과성을 입증한다. 그런데, 작은 수의 처치집단과 다수의 통제집단이 존재하는 경우, 대안의 하나로 matching 기법을 활용할 수 있다. 출처: Colner(2024)
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="match.Rmd" target="_blank" >
+                                                <span>R code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="HQQJUK" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Congruence Measure</h4>
+                                <figure class="main_imgg">
+                                    <img src="congruence.png" alt="Congruence Measure" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Congruence Measure</code>
+                                    정치학자들은 대중-엘리트의 선호 일치성(Congruence)에 관심을 가진다. 즉 선출된 엘리트의 선호도가 유권자의 선호도를 반영하는 정도에 관심을 갖는다.그러나 일치성 측정은 다양하다. 최근 컴퓨터 과학을 활용한 새로운 일치성 측정법을 제시하였는데, Earth Mover's Distance(EMD)이다.                                 </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="congruence.R" target="_blank" >
+                                                <span>R code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/NO90AJ" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Alluvial Plots</h4>
+                                <figure class="main_imgg">
+                                    <img src="alluv.png" alt="Alluvium" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Alluvial Plots</code>
+                                    이 그래프는 범주형 또는 순서형 변수가 있는 다차원 또는 반복 측정 데이터를 나타내기 위해 가변 폭 리본과 막대형 그래프를 사용한다. Riehmann, Hanfler, & Froehlich(2005) doi:10.1109/INFVIS.2005.1532152, Rosvall & Bergstrom(2010) doi:10.1371/journal.pone.0008694를 참조하세요. 이 그래프는 Wilkinson(2006) doi:10.1007/0-387-28695-0이 활용한 통계적 그래프이다.
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="alluvium.R" target="_blank" >
+                                                <span>R code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="plotdata.RDS" target="_blank">
+                                                <span>Replication Data</span>
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Baysian Factor Analysis Measurement</h4>
+                                <figure class="main_imgg">
+                                    <img src="mcmc.png" alt="MCMC" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Baysian Factor Analysis Measurement</code>
+                                    사회과학 개념의 측정은 매우 중요하다. 최근 베이시언 기법을 활용한 측정방법이 활용되고 있다. 예컨대, 민주주의라는 개념을 측정한다면, 민주주의라는 지표가 이진(예: 당일 유권자 등록), 순서형(예: 모든 범죄자, 일부 범죄자 또는 범죄자 없음) 또는 연속형(예: 입법 지구 효율성 격차)일 수도 있기 때문에 혼합 데이터에 베이지안 요인 분석을 사용할 수 있다(Quinn 2004).
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="mcmc.R" target="_blank" >
+                                                <span>R code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/JNV3XO" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.cambridge.org/core/services/aop-cambridge-core/content/view/0742F08306EFDD8612539F089853E4FE/S0003055422000934a.pdf/laboratories_of_democratic_backsliding.pdf" target="_blank">
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Likert Graph Template</h4>
+                                <figure class="main_imgg">
+                                    <img src="likert.png" alt="Likert" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Likert Graph Template</code>
+                                    사회과학에서 Likert 척도를 활용한 설문조사가 대부분을 차지한다. 하지만, Likert 척도로 측정된 설문문항을 제대로 그래프로 보여주는 것을 찾아보기 어렵다. 이 템플릿이 유용하게 활용될 수 있기를 바란다. 출처: Schaeffer et al.(2024) 2022년 9월부터 10월까지 덴마크에서 태어난 성인 4,800명과 덴마크에서 태어난 부모를 대상으로 실시하였다(Schaeffer et al., 2024)
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>
+                                        <li>
+                                            <a href="Likert.R" target="_blank" >
+                                                <span>R code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="Likert.RDS" target="_blank">
+                                                <span>Replication DATA</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                             
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Online Survey Experiments</h4>
+                                <figure class="main_imgg">
+                                    <img src="surveyex.png" alt="Survey" width="80%">
+                                </figure>
+                                <p>
+                                    <code>Online Survey Experiments</code>
+                                    위 실험은 2022년 9월부터 10월까지 덴마크에서 태어난 성인 4,800명과 덴마크에서 태어난 부모를 대상으로 실시하였다(Schaeffer et al., 2024). 
+                                </p>
+                                <div class="tag_part_cmmmn">                                   
+                                    <ul>
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/HRUXYI" target="_blank" >
+                                                <span>Harvard Dataverse</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://onlinelibrary.wiley.com/doi/pdf/10.1111/ajps.12933" target="_blank">
+                                                <span>paper</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                                                
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Factorial Design</h4>
+                                <figure class="main_imgg">
+                                    <img src="norm.png" alt="NORM" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Factorial Design</code>
+                                    규범 기반 정보 캠페인이 부패를 줄일 수 있을까? 이러한 캠페인은 사람들이 일반적으로 어떻게 행동하는지(설명적 규범) 또는 어떻게 행동해야 하는지(명령적 규범)에 대한 메시지를 사용한다. 우크라이나에서 실시한 설문 조사와 실험실 실험을 바탕으로 이 두 가지 유형의 사회적 규범의 뚜렷한 효과를 분석하고 평가한다. 이러한 결과는 메시징 캠페인, 특히 부패와 같이 집단 행동 딜레마를 완화해야 하는 사회 문제를 해결하는데 큰 의미를 갖는다. 사회조사에 있어서, Factorial Design의 예로 훌륭하다. 
+                                </p>
+                                <div class="tag_part_cmmmn"> 
+                                    
+                                    <ul>
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/RIBWNJ" target="_blank">
+                                                <span>Harvard Dataverse</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.ipr.northwestern.edu/documents/working-papers/2023/wp-23-33.pdf" target="_blank">
+                                                <span>paper</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                        
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">TSCS graph</h4>
+                                <figure class="main_imgg">
+                                    <img src="tscsgraph.png" alt="TSCS" width="100%">
+                                </figure>
+                                <p>
+                                    <code>TSCS graph</code>
+                                    TSCS 데이터를 분석하는 데 있어서, 시계열별 자료를 그래프로 정확히 현출하는 것이 중요하다. 위 그림에서는 매일 전3일간의 평균값을 구하고, 그 값의 년간 변화를 보여주고 있다. 위 그림을 현출하는 방법을 R code로 첨부하였다.
+                                </p>
+                                <div class="tag_part_cmmmn"> 
+                                    
+                                    <ul>
+                                        <li>
+                                            <a href="tscsgraph.R" target="_blank">
+                                                <span>R code</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="visitsgrouped.RDS" target="_blank">
+                                                <span>Replication DATA</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">TSCS</h4>
+                                <figure class="main_imgg">
+                                    <img src="tscs.png" alt="TSCS" width="100%">
+                                </figure>
+                                <p>
+                                    <code>TSCS</code>
+                                    TSCS 데이터를 분석하는 데 사용 가능한 모든 방법 중에서 이중차분법(DID)와 이원 고정 효과방법(Two-Way Fixed Effects)이 사회과학에서 가장 자주 사용된다. 스탠포드대학교 Xu 교수의 TSCS 분석방법의 수식을 종합하였다.
+                                </p>
+                                <div class="tag_part_cmmmn"> 
+                                    
+                                    <ul>
+                                       
+                                        <li>
+                                            <a href="https://github.com/xuyiqing/panelView" target="_blank">
+                                                <span>github</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="TSCS.pdf" target="_blank">
+                                                <span>TSCS 수식</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">TORCH-CHOICE</h4>
+                                <figure class="main_imgg">
+                                    <img src="torch.png" alt="TORCH-CHOICE" width="100%">
+                                </figure>
+                                <p>
+                                    <code>TORCH-CHOICE</code>
+                                    PyTorch를 사용하여 유연하고 빠른 선택 모델링을 위한 라이브러리이다 이 라이브러리에는 추정과 예측을 위해 설계된 로짓 및 중첩 로짓 모델이 있다. Authors: Tianyu Du, Ayush Kanodia and Susan Athey; Contact: tianyudu@stanford.edu
+                                </p>
+                                <div class="tag_part_cmmmn"> 
+                                    <ul>
+                                        <li>
+                                            <a href="torch_choice.ipynb" target="_blank">
+                                                <span>ipynb</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="ModeCanada.csv" target="_blank">
+                                                <span>DATA</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="https://github.com/gsbDBI/torch-choice" target="_blank">
+                                                <span>github</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="torch.pdf" target="_blank">
+                                                <span>Paper</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                        
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Random Forest</h4>
+                                <figure class="main_imgg">
+                                    <img src="forest.png" alt="랜덤포레스트" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Random Forest</code>
+                                    랜덤 포레스트(random forest) 머신러닝 예측모델은 데이터 생성 프로세스(DGP)에 대한 가정없이 비선형성, 공변량 간의 상호 작용 또는 관련 없는 공변량의 포함을 매우 유연하게 처리하는 예측 도구이다(Montgomery & Olivella, 2018). 연구 결과, 계층이동 기대 불일치의 측정 타당성을 확인하였고, 직무만족에 미치는 부의 영향과 고등교육을 통한 상호작용 효과를 확인하였다.                                
+                                </p>
+                                <div class="tag_part_cmmmn"> 
+                                    <ul>
+                                        <li>
+                                            <a href="forest.Rmd" target="_blank">
+                                                <span>R</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="../choi3.pdf" target="_blank">
+                                                <span>Paper</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                        
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Latent Class Analysis</h4>
+                                <figure class="main_imgg">
+                                    <img src="danger.png" alt="컨조인트분석" width="100%">
+                                </figure>
+                                <p>
+                                    <code>잠재계층분석</code>
+                                    잠재계층 분석(LCA)은 불안태도의 유형을 분류한다고 하면, 불안태도 질문에 대한 사람들의 응답의 유사성을 기반으로 별개의 “프로필(profile)” 또는 “계층(class)”의 존재를 조사하는 기법(Magidson & Vermunt, 2004)으로, 두 개의 불안 잠재유형(일상적 위험 불안 유형, 비일상적 위험 불안 유형)에서 차별화된 계층을 찾는데 적합한 방법이다.    
+                                </p>
+                                <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="lca_final.Rmd" target="_blank">
+                                                <span>R</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="danger.pdf" target="_blank">
+                                                <span>Paper</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                                                        
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">컨조인트분석</h4>
+                                <figure class="main_imgg">
+                                    <img src="kim.png" alt="컨조인트분석" width="100%">
+                                </figure>
+                                <p>
+                                    <code>컨조인트분석</code>
+                                    컨조인트 분석은 펙토리얼(Factorial)로 설계된 평가의 결과들을 낱낱이 나누는 것을 뜻하는데, 평가 대상의 속성을 평가자들이 평가한 후 그 결과를 통해 속성들이 가지고 있는 효용성을 계산할 수 있도록 한다. 즉, 평가자들이 심리적인 판단을 측정하고자 하는 기법이라고 말할 수 있다. 
+                                </p>
+                                <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="Kim_ExpertChoice.html" target="_blank">
+                                                <span>R</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="kim.pdf" target="_blank">
+                                                <span>Paper</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <section class="othrr_mthd cmn-gap cmn-gap-border-inner" id="other-methods">                   
+                    <div class="sub_haeding_mn sft">
+                        <div class="menu_scrll"></div>
+                        <h3>질적 분석방법</h3>
+                    </div>                    
+                    <div class="row panel_data_mthd_row gx-3 gy-4">
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Structural Topic Model</h4>
+                                <figure class="main_imgg">
+                                    <img src="stm.png" alt = "Structural Topic Model" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Structural Topic Model</code>
+                                    구조적 주제 모델(STM)을 사용하면 연구자는 문서 단위의 공변량을 사용하여 주제 모델을 추정할 수 있다. 
+                                    stm 패키지에는 모델 선택, 시각화 및 주제 공변량 회귀 추정을 위한 도구를 포함한다.
+                                    STM 개발자: Roberts et. al.(2014) <doi:10.1111/ajps.12103>,Roberts et. al.(2016) <doi:10.1080/01621459.2016.1141684>
+                                    Vignettes:  Roberts et. al. (2019) <doi:10.18637/jss.v091.i02>.
+                                    여기서는 APSR(2023)에서 활용한 STM 분석기법을 Replication 한다.
+                                </p>
+                                    <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="climatechange.Rmd" target="_blank">
+                                                <span>R code</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/0Y8IKW" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://www.cambridge.org/core/journals/american-political-science-review/article/facing-change-gender-and-climate-change-attitudes-worldwide/38688C0CA6DF889475FDB52C06DD7FF9" target="_blank">
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>  
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">토픽모델링</h4>
+                                <figure class="main_imgg">
+                                    <img src="topic.png" width="100%">
+                                </figure>
+                                <p>
+                                    <code>토픽모델링</code>
+                                    LDA기법은 문헌 내의 잠재된 토픽을 추정하는 것으로 어떤 단어들을 어떠한 토픽에서 선택하여 배치할 것인지 각각의 파라미터(parameter; α, β)로 모델링하는 기법으로 문헌, 단어 등 관찰된 변수(w)를 통해 문헌의 구조 같은 잠재 변수를 추론하는 것을 목적으로 한다.
+                                    여기서는, 김은영, & 최천근. (2024). 토픽모델링을 활용한 노인장기요양보호 환자의 주 보호자 돌봄 부담 연구. 융합사회와 공공정책, 18(1), 3-29. 논문의 분석 코드를 공유하고자 한다.
+                                </p>
+                                <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="kim_topic.html" target="_blank">
+                                                <span>R</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="topic.pdf" target="_blank">
+                                                <span>Paper</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Content Analysis</h4>
+                                <figure class="main_imgg">
+                                    <img src="content.png" alt = "Content Analysis" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Content Analysis</code>
+                                    내용 분석은 주어진 질적 데이터(예: 텍스트) 내에 특정 단어, 주제 또는 개념이 존재하는지 확인하는 데 사용되는 연구 방법이다. 
+                                    내용 분석을 사용하여 연구자는 특정 단어, 주제 또는 개념의 존재, 의미 및 관계를 정량화하고 분석할 수 있다. 
+                                    예를 들어, 연구자는 뉴스 기사에서 사용된 언어를 평가하여 편향이나 편파성을 찾을 수 있다. 
+                                    그런 다음 연구자는 텍스트 내의 메시지, 작성자, 청중, 심지어 텍스트를 둘러싼 문화와 시간에 대한 추론을 할 수 있다.
+                                    여기서는, APSR(2024) 논문중에서 open-ended question에서 제시된 답변을 바탕으로 표로 정리한 방법을 Replication 하고자 한다.
+                                    행정학에서 어떤 정책의 성공요인이나 실패요인 등에 대해 응답자로부터 주관적인 답변을 듣는 경우가 있는데, 그 결과를 논문이나 학술지에 보고하는 방법의 하나로 활용될 수 있기를 기대한다.
+                                </p>
+                                    <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="content.R" target="_blank">
+                                                <span>R code</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/EWXQQH" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://static1.squarespace.com/static/594859be72af6521f2aef7a5/t/663b92799d8c5552beab0c90/1715180154764/The_American_Viewer_APSR_Kim+and+Patterson.pdf" target="_blank">
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Meta Analysis</h4>
+                                <figure class="main_imgg">
+                                    <img src="meta.png" alt = "Meta Analysis" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Meta Analysis</code>
+                                    메타 분석을 적용하면 동일한 질문을 다루는 다양한 과학적 연구를 분석할 수 있다.
+                                    모든 개별 연구에는 어느 정도의 오류가 포함되어 있다고 가정한다.
+                                    예를 들어, 개별연구는 특정 질병에 대한 두 가지 치료법의 사망률이 될 수 있다. 
+                                    목표는 개별 연구 간의 이질성을 고려하여 개별 연구로부터 통합된 요약 추정치를 얻는 것이다.
+                                    개별 연구에서 집계된 데이터는 더 높은 통계적 힘으로 이어진다. 연구절차는 다음과 같다.
+                                    (1) 연구문제 정의 (2) 선별된 개별 연구에 대한 포함/제외 기준을 정의한다. (3) 문헌 검색 (4) 적격 연구 선택
+                                    (5) 데이터 수집 (6) 연구 전반에 걸쳐 결과를 종합하고 효과 크기에 대한 합동 추정치를 얻는다. (7) 포함된 연구의 이질성 평가
+                                    (8) 민감도 및 하위군 분석 수행. 여기서는 APSR(2021) 메타분석을 Replication 한다.
+
+                                </p>
+                                    <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="meta.Rmd" target="_blank">
+                                                <span>R code</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/BGCVOW" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://www.cambridge.org/core/journals/american-political-science-review/article/abs/do-commodity-price-shocks-cause-armed-conflict-a-metaanalysis-of-natural-experiments/469E8F1CBA02E4E5D525E3355DC401D9" target="_blank">
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                          
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Q Methodology</h4>
+                                <figure class="main_imgg">
+                                    <img src="process.png" alt = "Q Methodology" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Q Methodology</code>
+                                    William Stephenson 에 의해 고안된 성격(인성)측정  방법으로, 사람의 개인적 관점, 의견과 같은 주관(subjectivity) 연구에 유용한 방법이다.
+                                    피조사자들이 특정한 대상이나 현상에 대해 가지고 있는 생각이나 태도, 가치관 등의 유사성에 따라서 요인분 석에 의해 집단으로 분류하는 방식이다.
+                                    사람들이 페미니스트, 포르노, 레즈비언 등을 어떻게 생각하는지 등의 연구에도 사용되어 왔다. 
+                                    제1단계: 연구대상자나 관찰자에게 많은 종류의 진술문이나 그림 등을 준다. 제2단계: 연구자가 제시한 평정척도 상에 대상자 자신의 기호나 판단을 가장 많이 긍정, 가장 적게 긍정 단계에 따라 분류한다.
+                                    제3단계: 제시된 자료에 대해 연구대상자, 관찰자가 생각과 일치하는 정도에 따라 순위를 매기게 한다.
+                                </p>
+                                    <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="Q_method.Rmd" target="_blank">
+                                                <span>R code</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="https://dataverse.nl/dataset.xhtml?persistentId=doi:10.34894/ZUY803" target="_blank">
+                                                <img src = "harvard.png" style="max-width:15%;height:auto;" alt="Harvard" ></a>                                                                
+                                            </a>
+                                        </li> 
+                                        <li>
+                                            <a href="https://www.frontiersin.org/journals/sustainable-food-systems/articles/10.3389/fsufs.2022.954934/full" target="_blank">
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Qualitative Comparative Analysis</h4>
+                                <figure class="main_imgg">
+                                    <img src="QCA.png" alt = "Qualitative Comparative Analysis" width="100%">
+                                </figure>
+                                <p>
+                                    <code>Qualitative Comparative Analysis</code>
+                                    QCA 연구방법은 결과를 얻기 위해 원인이 결합되는 방식을 식별하는 데 중점을 둔다. 
+                                    예를 들어, 인구 통계, 천연 자원의 풍부함, 제도적 개발의 조합은 내전을 일으키는 것일까? 답은 다음과 같을 수 있다. 
+                                    천연 자원이 풍부하고 제도적 구조가 약하거나 인종 간 분열이 심할 때 갈등이 발생한다. 
+                                    핵심적 아이디어는 다양한 조건 구성이 동일한 결과(동등한 최종성)로 이어질 수 있고, 연구의 관심사는 어떤 조건 조합이 중요한지 평가하는 것이다.
+                                    많은 정성적 비교 분석 응용 프로그램은 부울 최소화 알고리즘을 사용하여 어떤 요인 구성이 다른 결과와 관련이 있는지 평가한다. 비평가들은 이러한
+                                    알고리즘이 측정 오류에 민감하다고 강조한다(Hug 2013). 이러한 민감성을 지적하면서 일부는 심지어 QCA를 조사 프레임워크로 거부해야 한다고 주장하기까지 한다(Lucas and Szatrowski 2014; Baumgartner and Thiem 2017 참조).
+                                    아무튼 여기서는 AJPS(2022)에서 활용한 QCA 방법을 Replication 한다.
+                                </p>
+                                    <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="qca4.Rmd" target="_blank">
+                                                <span>R code</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="Copy of Payments and Penalties Data.xlsx" target="_blank">
+                                                <span>Replication Data</span>
+                                            </a>
+                                        </li>  
+                                        <li>
+                                            <a href="https://www.cambridge.org/core/journals/american-political-science-review/article/payments-and-penalties-for-democracy-gendered-electoral-financing-in-action-worldwide/9A8671265ED91C755324B717B556F7CD" target="_blank">
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                        
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                          
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">대한민국 시군구 지도</h4>
+                                <figure class="main_imgg">
+                                    <img src="seoul.png" width="100%">
+                                </figure>
+                                <p>
+                                    <code>대한민국 시군구 지도</code>
+                                   ggplot을 이용하여 지도를 그릴 수 있다. 제1단계: shapefile 다운받기, 제2단계: 지도 데이터 불러오기(read_sf() 함수), 제3단계: 한글 출력 문제 Encoding(iconv 함수), 
+                                   제4단계: 지도 그리기(geom_sf() 함수), 제5단계: 부가데이터 처리(예: 서울시군구별 문화시설 개소), 제6단계: 시군구 대표경도위도 데이터처리(시군구 이름 붙이기), 제7단계: 최종적으로 "서울 시군구별 문화시설 개소" 그리기 완성,
+                                   유의사항: crs 설정이 매우 중요
+                                </p>
+                                    <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="koreamap.R" target="_blank">
+                                                <span>R code</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="stat_seoul.xlsx" target="_blank">
+                                                <span>Replication Data</span>
+                                            </a>
+                                        </li>  
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">US Counties Map</h4>
+                                <figure class="main_imgg">
+                                    <img src="usmap.png" width="100%">
+                                </figure>
+                                <p>
+                                    <code>US Counties Map</code>
+                                    일반적으로 R에서는 알래스카와 하와이를 포함하는 멋진 미국 지도를 만드는 것이 어렵다. library("usmap")에 제시된 함수는 이러한 주를 수동으로 새 위치로 이동하고 매핑 및 시각화를 위한 간단한 피처(sf) 객체를 제공하여 이 문제를 우아하게 제시한다. 
+                                    이를 통해 사용자는 미국 지도에 공간 데이터나 피처를 쉽게 추가할 수 있다. 이러한 원리로 한국 행정통계 지도에 적용할 수 있는 koreamap library를 개발할 수 있을 것으로 기대한다.
+                                </p>
+                                    <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="usmap.R" target="_blank">
+                                                <span>R code</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="https://github.com/pdil/usmap" target="_blank">
+                                                <span>github</span>
+                                            </a>
+                                        </li>  
+                                        <li>
+                                            <a href="https://datadoctorblog.com/2021/01/27/R-Vis-korea-map/" target="_blank">
+                                                <span>Korea Map references</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>    
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">선진외국 비교분석</h4>
+                                <figure class="main_imgg">
+                                    <img src="police.png" width="100%">
+                                </figure>
+                                <p>
+                                    <code>선진외국 비교분석</code>
+                                    매칭 프론티어 기법(Matching Frontier)는 기존의 매칭방법을 최적의 유연한 접근 방식으로 통합하여 바로 위에서 제시한 두 가지 한계를 해결하였다(King & Nielsen, 2019). 
+                                    첫째, 매칭 프론티어 기법은 가능한 각 샘플 크기(N, N-1, N-2, ... )에 대해 최대 균형으로 일치하는 솔루션을 계산한다. 
+                                    둘째, 매칭 프론티어 기법은 명백한 편향-분석 최적화 문제를 한 번의 실행으로 수동 조정없이 자동으로 해결해주는 장점이 있다. 
+                                    여기서는, 최천근. (2024). 매칭 프론티어 기법을 통한 선진외국과의 경찰인력 및 치안활동성과 비교분석. 한국경찰연구, 23(3), 103-126. 논문의 분석 코드를 공개한다. 
+                                    이 연구에서는 매칭 프론티어 기법을 활용하여 한국의 시도경찰청 또는 경찰서와 가장 유사한 미국, 영국, 일본의 경찰관서를 탐색하고, 그 경찰관서 간의 비교를 통해 경찰인력 규모의 수준과 경찰활동성과를 비교하였다.
+                                </p>
+                                <div class="tag_part_cmmmn">
+                                    <ul>
+                                        <li>
+                                            <a href="police.Rmd" target="_blank">
+                                                <span>R code</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="https://www.kci.go.kr/kciportal/landing/article.kci?arti_id=ART003122626" target="_blank">
+                                                <span>Paper</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                                            
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                                <div class="panel_data_mthd_col_inner">
+                                    <h4 class="hdng">Fuzzy AHP & Fuzzy TOPSIS</h4>
+                                    <figure class="main_imgg">
+                                        <img src="p_data.png" width="100%">
+                                    </figure>
+                                    <p>
+                                        <code>Fuzzy TOPSIS</code>
+                                        TOPSIS (Technique
+                                        for Order Preference by Similarity to Ideal Solution)는 Hwang(1981)에 의
+                                        해 개발 되었고, 대안들과 이상적인 해(solution) 간의 유사성과 최악의
+                                        해와의 거리를 비교하여 대안의 상대적 우수성을 평가하는 방법이다.                                        </p>
+                                        <div class="tag_part_cmmmn">
+                                        <ul>
+                                            <li>
+                                                <a href="parkAHP_auto_choi_CI.html" target="_blank">
+                                                    <span>R</span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="park.pdf" target="_blank">
+                                                    <span>Paper</span>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                                <div class="panel_data_mthd_col_inner">
+                                    <h4 class="hdng">AHP</h4>
+                                    <figure class="main_imgg">
+                                        <img src="kwak.png" width="100%">
+                                    </figure>
+                                    <p>
+                                        <code>AHP</code>
+                                        AHP(Analytic Hierarchy Process) 분석기법은 1970년대 초에 Saaty에 의해 개발된 계층분석기법으로 해결해야 할 문제 또는 의사결정 체계를 몇 개의 계층으로 구성하여 요소 간의 상대적인 우선순위를 정하려는 분석기법으로 정량적인 분석이 어려운 의사결정 분야에서 전문가들의 정성적인 판단을 활용하여 경쟁 요소의 중요도를 구하는 데 유용하게 활용될 수 있다.                                    
+                                    </p>
+                                    <div class="tag_part_cmmmn">
+                                        <ul>
+                                            <li>
+                                                <a href="kwak_ahp_anal.html" target="_blank">
+                                                    <span>R</span>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="choi2.pdf" target="_blank">
+                                                    <span>Paper</span>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>                            
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</main>
+<footer>
+    <address style="text-align: center;">
+        <span class="zip">02876</span> 
+        서울특별시 성북구 삼선교로 16길(삼선동2가) 116, 한성대학교 연구관 420호
+        <br>
+        <span class="tel">TEL: 82-(0)2-760-4430</span>
+        <br>
+        <span class="email">Email: cheongeunchoi@hansung.ac.kr</span>
+    </address>
+    <div style="text-align:center;padding:10px;margin-top:7px;">copyright © 최천근 2024 All Rights Reserved</div>
+   
+</footer>
+    <script src="../jquery-3.2.0.min.js?ver=4.4.1" id="jquery-min-js"></script>
+    <script src="../bootstrap.js?ver=4.4.1" id="jquery-bootstrap-js"></script>
+    <script src="//kit.fontawesome.com/d796c06ff3.js?ver=6.7.1" id="d796c06ff3-js-js"></script>
+    <script src="../jquery-equal-height.js?ver=3.5.7" id="jquery-equal-height-js-js"></script>
+    <script src="//unpkg.com/aos@2.3.1/dist/aos.js?ver=6.7.1" id="aos-js-js"></script>
+    <script src="../responsive-tabs.js?ver=3.5.7" id="responsive-tabs-js-js"></script>
+    <script src="../common.js?ver=6.7.1" id="common-js-js"></script>
+    <script>
+        /(trident|msie)/i.test(navigator.userAgent) && document.getElementById && window.addEventListener && window.addEventListener("hashchange", function() {
+            var t, e = location.hash.substring(1);
+            /^[A-z0-9_-]+$/.test(e) && (t = document.getElementById(e)) && (/^(?:a|select|input|button|textarea)$/i.test(t.tagName) || (t.tabIndex = -1),
+            t.focus())
+        }, !1);
+    </script> 
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+      AOS.init();
+    </script>
+              
+    </body>
+</html>

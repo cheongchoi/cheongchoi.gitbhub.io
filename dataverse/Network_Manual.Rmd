@@ -1,0 +1,2489 @@
+---
+title: "btergm"
+author: "Cheon Geun Choi"
+date: "2025-01-11"
+mainfont: NanumGothic
+output:
+  pdf_document:
+    latex_engine: xelatex
+  word_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+always_allow_html: yes
+---
+
+
+# 1. Network Analysis
+## 1.1. 참고자료
+
+![Fig1.1](uq1.jpg)
+
+* https://bookdown.org/jdholster1/idsr/network-analysis.html
+
+* https://bookdown.org/markhoff/social_network_analysis/understanding-network-data-structures.html
+
+* https://cran.r-project.org/web/packages/tsna/vignettes/tsna_vignette.html
+
+* chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://mran.microsoft.com/snapshot/2015-03-29/web/packages/xergm/vignettes/btergm.pdf
+
+* https://ladal.edu.au/net.html
+
+## 1.2. Intro
+
+This tutorial introduces network analysis using R. Network analysis is a method for visualization that can be used to visualize relationship between different elements, be they authors, characters, or words. This tutorial is aimed at beginners and intermediate users of R with the aim of showcasing how to perform network analysis based on textual data and how to visualize network graphs using R. The aim is not to provide a fully-fledged analysis but rather to show and exemplify selected useful methods associated with network analysis.
+
+In addition to being a visualization technique, networks have certain statistical properties that can be compared which makes network analysis a very useful procedure. To this end, this tutorial shows how to create and modify network graphs.
+
+## 1.3. What is Text Analysis?
+The most common way to visualize relationships between entities are networks (Silge and Robinson 2017, 131–37). Networks, also called graphs, consist of nodes (typically represented as dots) and edges (typically represented as lines) and they can be directed or undirected networks.
+
+In directed networks, the direction of edges is captured. For instance, the exports of countries. In such cases the lines are directed and typically have arrows to indicate direction. The thickness of lines can also be utilized to encode information such as frequency of contact.
+
+The example that we will be concerned with focuses on the first type of data as it is by far the most common way in which relationships are coded.To show how to create a network, we will have a look at the network that the characters in William Shakespeare’s Romeo and Juliet form.
+
+### Preparation and session set up
+
+This tutorial is based on R. If you have not installed R or are new to it, you will find an introduction to and more information how to use R here. For this tutorials, we need to install certain packages from an R library so that the scripts shown below are executed without errors. Before turning to the code below, please install the packages by running the code below this paragraph. If you have already installed the packages mentioned below, then you can skip ahead and ignore this section. To install the necessary packages, simply run the following code - it may take some time (between 1 and 5 minutes to install all of the libraries so you do not need to worry if it takes some time).
+
+* install packages
+install.packages("flextable")
+install.packages("GGally")
+install.packages("ggraph")
+install.packages("igraph")
+install.packages("Matrix")
+install.packages("network")
+install.packages("quanteda")
+install.packages("sna")
+install.packages("tidygraph")
+install.packages("tidyverse")
+install.packages("tm")
+install.packages("tibble")
+install.packages("quanteda.textplots")
+install klippy for copy-to-clipboard button in code chunks
+install.packages("remotes")
+remotes::install_github("rlesur/klippy")
+
+Next, we load the packages.
+
+```{r}
+# activate packages
+library(flextable)
+library(GGally)
+library(ggraph)
+library(gutenbergr)
+library(igraph)
+library(Matrix)
+library(network)
+library(quanteda)
+library(tidygraph)
+library(tidyverse)
+library(tm)
+library(tibble)
+# activate klippy for copy-to-clipboard button
+klippy::klippy()
+```
+
+Once you have installed R, RStudio, and have also initiated the session by executing the code shown above, you are good to go.
+
+
+# 2. 기초 이론
+
+ we will cover concepts and procedures related to network analysis in R. “Networks enable the visualization of complex, multidimensional data as well as provide diverse statistical indices for interpreting the resultant graphs” (Jones et al., 2018). Put otherwise, network analysis is a collection of techniques that visualize and estimate relationships among agents in a social context. Furthermore, network analysis is used “to analyze the social structures that emerge from the recurrence of these relations” where “[the] basic assumption is that better explanations of social phenomena are yielded by analysis of the relations among entities” (Science Direct; Linked Below).
+
+Networks are made up of nodes (i.e., individual actors, people, or things within the network) and the ties, edges, or links (i.e., relationships or interactions) that connect them. The extent to which nodes are connected lends to interpretations of the measured social context.
+
+“By comparison with most other branches of quantitative social science, network analysts have given limited attention to statistical issues. Most techniques and measures examine the structure of specific data sets without addressing sampling variation, measurement error, or other uncertainties. Such issues are complex because of the dependencies inherent in network data, but they are now receiving increased study. The most widely investigated approach to the statistical analysis of networks stresses the detection of formal regularities in local relational structure.
+
+![Fig2.1](networktypes.png)
+
+The figure above illustrates some of the relational structures commonly found in analyses of social networks.
+
+* A: Demonstrates a relationship of reciprocity/mutuality.
+
+* B: Demonstrates a directed relationship with a common target.
+
+* C: Relationships emerge from a common source.
+
+* D: Transitive direct relationships with indirect influences.
+
+Another type is homophily, which is present, for example, when same-sex friendships are more common than between-sex friendships. This involves an interaction between a property of units and the presence of relationships” (Peter V. Marsden, in Encyclopedia of Social Measurement, 2005). This sort of model might reflect the tendency of people to seek out those that are similar to themselves.
+
+## 2.1. 네트워크 데이터 구조
+
+Underlying every network visualization is data about relationships. These relationships can be observed or simulated (that is, hypothetical). When analyzing a set of relationships, we will generally use one of two different data structures: edge lists or adjacency matrices.
+
+###  Edge lists
+One simple way to represent a graph is to list the edges, which we will refer to as an edge list. For each edge, we just list who that edge is incident on. Edge lists are therefore two column matrices that directly tell the computer which actors are tied for each edge. In a directed graph, the actors in column A are the sources of edges, and the actors in Column B receive the tie. In an undirected graph, order doesn’t matter.
+
+In R, we can create an example edge list using vectors and data.frames. I specify each column of the edge list with vectors and then assign them as the columns of a data.frame. We can use this to visualize what an edge list should look like.
+
+```{r}
+personA <- c("Mark", "Mark", "Peter", "Peter", "Bob", "Jill")
+personB <- c("Peter", "Jill", "Bob", "Aaron", "Jill", "Aaron")
+
+edgelist <- data.frame(PersonA = personA, PersonB = personB, stringsAsFactors = F)
+
+print(edgelist)
+```
+What are the upsides of using the edge list format? As you can see, in an edge list, the number of rows accords to the number of edges in the network since each row details the actors in a specific tie. It is therefore really simple format for recording network data in an excel file or csv file.
+
+What are the downsides? The first is practical - it is impossible to represent isolates using an edge list since it details relations. There are ways to get around this problem in R, however. The second is technical - edge lists are not suitable for data formats for performing linear algebraic techniques. As a result, we will almost always convert and edge list into either an adjacency matrix, or into a network object.
+
+###  Adjacency matrices
+Adjacency matrices have one row and one column for each actor in the network. The elements of the matrix can be any number but in most networks, will be either 0 or 1. A matrix element of 1 (or greater) signals that the respective column actor and row actor should be tied in the network. Zero signals that they are not tied.
+
+We can use what we learned in the last tutorial to create such a matrix. An example might look like this:
+
+
+```{r}
+adjacency <- matrix(c(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0), nrow = 5, ncol = 5, dimnames = list(c("Mark", "Peter", "Bob", "Jill", "Aaron"), c("Mark", "Peter", "Bob", "Jill", "Aaron")))
+
+print(adjacency)
+```
+What are the upsides of using the adjacency matrix format? Adjacency matrices are the most fundamental network analysis data format. They undergird all of the analytical techniques we will show you later on. They are also much more efficient than edge lists. For example, imagine searching for whether Peter and Jill are friends in an adjacency matrix as opposed to an edge list. In the adjacency matrix, we would go to Peter’s row and Jill’s column and we would find either a 1 or a 0, giving us our answer. In an edge list, we would have to search through each edge, which might seem simple in a dataset with only 5 people, but as the edge list grows, it will scale linearly with the number of edges.
+
+What are the downsides? It is really difficult to record network data with an adjacency matrix. They are better suited for computers than people.
+
+## 2.2. Your First Network
+
+In this chapter, we will create our own network data in Excel, learn to load the data into R, and the turn the data into a network object using the igraph package. You can use these steps to begin analyzing data from your own projects.
+
+### Creating a project
+First let’s create a new R project. RStudio projects allow you to keep your various data analysis projects separate from one another. Each project has its own working directory, workspace, history, and source documents. When you load a project, you will therefore see the work, history and files associated with that project, helping your organize your work.
+
+* Go to the “File” menu at the top of the screen and click on “New Project…”
+
+* Then start a new directory. Directories are folders where you keep your R Project and all of the data, files, code etc. that you create and use in the project.
+
+* Now start an empty project. Projects are created by RStudio and they maintain your R workspace for you, so that you can load it exactly as it was before you closed RStudio.
+
+* Finally name your project (I named mine “SNA_Tutorial”) and browse to find the location on your computer where you would like it to be saved. We will use this directory to store all of the files and information for the class, so make sure to choose a name you can remember.
+
+### Creating data in Excel
+Imagine you want to collect some data on your local social network. You might go to each of your friends and ask them to nominate up to five people who are their friends. You then want to load this data into R and graph it as a network. How could you go about doing this?
+
+The first step is to record the data in some machine-readable way, either using Excel or Numbers or even in plain text files. Many people, before coming to R, have experience using Excel or some program like it to manage data, whether financial, academic, or otherwise. An Excel worksheet is organized into rows and columns with columns generally containing information of a single kind (say First Names) and rows generally containing the data for a single observation. You can freely input data into any of the cells.
+
+An empty Excel spreadsheet
+
+The first step in any network analysis project is to create a dataset with the relationships between the people in your study. The easiest way to record relationships in Excel is as an edge list, which, as we discussed in the last section, is a two column matrix that lists the pairs of actors in a relationship.
+
+Let’s build an edge list together in Excel. Imagine we want to track patterns of monetary provision in a household (i.e. whether person A gives person B money). We construct an edge list, where column A is the Ego (the money provider) and column B is the Alter (the money taker). We then fill in instances, or relationships, of monetary provision from Ego to Alter. Below is an example:
+
+![Fig2.3](gift_giving_el.png)
+
+
+Money providing edge list (Hoffman family)
+
+Try recording something similar for your family!
+
+### Saving Excel data as a .csv file
+Great! Now we need to save this data in a format that R can easily read. I generally use the .csv format, which separates values by commas, because R has a default function for reading .csv files.
+
+To save an Excel sheet as a .csv file, in Excel go to “File -> Save As…”
+
+Then give your file a name (I chose “money_edgelist”), choose the place where you want to save it (inside of the directory you made for class), and finally (the most important part!), click on the “File Format” dropdown menu and choose “Comma Separated Values (.csv)”. Click “Save”!
+
+It will ask will warn you that the workbook contains features that will not work or may be removed if you save it in the selected file format and ask if you want to continue. Click “Continue”.
+
+
+### Loading data into R
+Open up RStudio, make sure you are in your project for class (if not, go to “File -> Open Project”, and selection your project), and open a new R Script by going “File -> New File -> R Script”. Save the empty script and name it “loading_data.R”. Your RStudio should look like this:
+
+```{r}
+money_edgelist = read.csv("money_edgelist.csv")
+```
+
+### From data to networks
+In this class, we will primarily use igraph, a user-maintained package in R, to analyze networks. Installing igraph gives us a bunch of new tools for graphing, analyzing and manipulating networks, that don’t come with base R. The first step then is to install igraph. To install a new package, we use the install.packages() function. It takes a character argument that is the name of the package you wish to install.
+
+```{r}
+# install.packages("igraph", repos='http://cran.us.r-project.org')
+library("igraph")
+```
+
+This will allow us to use all of igraph’s functions. To analyze networks, igraph uses an object class called: “igraph”. We therefore have to convert our edge list, freshly loaded into R, into an igraph object.
+
+igraph only takes matrices, so we then have to convert our data.frame (the default class of objects returned by read.csv()) to a matrix.
+
+
+```{r}
+money_edgelist <- as.matrix(money_edgelist)
+```
+
+We can now turn the money_edgelist edge list into a network object. The required function is graph.edgelist() and it takes two arguments, the network data (an edge list) and whether the edges are directed or undirected. In this case, because giving money is not necessarily a reciprocal relationship (i.e. just because I give you money, doesn’t mean you necessarily give it back… in fact, the opposite is almost always the case!), the network should be directed.
+
+```{r}
+moneyNetwork <- graph.edgelist(money_edgelist, directed=TRUE)
+```
+
+* A Note on Function Documentation If you want to see more about graph.edgelist() or if you want to see other ways to graph data type, you can type ?graph.edgelist. Entering ? before any function will cause R to bring up documentation on that function.
+
+Now we have two objects in our Environment, the money_edgelist and a new networked, called moneyNetwork. Both contain the same information at the moment, but igraph can only make use of the latter.
+
+* What if my data was in adjacency matrix format? If your data was in adjacency matrix format, then you would use the graph.adjacency() function instead of the graph.edgelist() function. More about the graph.adjacency() function can be read in the function’s help section accessed by typing ?graph.adjacency
+
+### Exploring your network
+We finally have a network in R! So.. what next? Well we can read a summary of it by typing its name into R.
+
+```{r}
+moneyNetwork
+```
+* The first line - which begins with IGRAPH DN - tells us moneyNetwork is an igraph object and a directed network (DN), with N nodes and E edges.
+
+* The next line tells us some attributes of the nodes and edges network. At the moment, it only has the attribute “name” for the vertices (v/c). We can look at the values of the “name” attribute with the V()$ function.
+
+```{r}
+V(moneyNetwork)$name
+```
+Finally, the last part gives us a snapshot of the edges present in the network, most of which are omitted.
+
+We can visualize the network using the plot() function.
+
+```{r}
+plot(moneyNetwork)
+```
+
+The default visualization is pretty ugly… In the next section, we will learn how to improve the aesthetics of our network visualizations.
+
+
+## 2.3. Network Visualization and Aesthetics
+As social scientists, we want to tell convincing stories about the structure and dynamics of the networks we study. Visualization and statistics are the primary tools at our disposable for conveying these stories.
+
+In this tutorial we will learn how to change the aesthetics of our network visualizations. When visualizing networks, there are a number of different elements we can adjust. First, we can change the color, size, shapes and labels of nodes. Second, we can change the color, width, curviture and appearance of edges. We can highlight the location of different groups in the network. Finally, we can manipulate the overall layout of the network.
+
+### The Basics
+Let’s start by adjusting the basic visualization. First, load in the data we created in the last tutorial and graph it as a network. The code below should look familiar. The only difference is that I converted money_edgelist into a matrix in the same line as graphing it as an edgelist. This is called nesting functions. There is no limit to the amount of functions you can have nested, though often times it is easier to read if you break them up into multiple lines.
+
+```{r}
+library(igraph)
+money_edgelist <- read.csv("money_edgelist.csv", stringsAsFactors = F)
+moneyNetwork <- graph.edgelist(as.matrix(money_edgelist), directed=TRUE)
+```
+
+Visualizing the network is as simple as typing plot(moneyNetwork). But as I mentioned earlier, the default plot is really horrible (and it used to be worse…). We can adjust the settings of the plot so that the resulting visualization is more aesthetically pleasing. There are many settings for the igraph plot() function, and we will go over the bare minimum you need to start making decent visualizations on your own.
+
+```{r}
+plot(moneyNetwork)
+```
+The most basic things we can change are the sizes and colors of nodes. When your network is large, often the nodes will appear too large and clumped together. The argument vertex.size allows you to adjust node size (vertex is the graph-theory term for node!).
+
+```{r}
+plot(moneyNetwork, vertex.size = 10)
+```
+
+This is the basic way you change the settings of the plot function in igraph - you put a comma next to the next to the network object, type the name of the setting you want to change, and set it to a new value. Here we set vertex.size to 10. When you don’t change any settings, R will automatically use the default settings. You can find them in the help section for that function (i.e. by typing ?plot.igraph, for example). All you have to do is remember the names of the various settings, or look them up at: (http://igraph.org/r/)
+
+The nodes have an ugly light orange color… We can use vertex.color to change their color to something nicer. We can also remove the ugly black frames by changing the vertex.frame.color setting to NA.
+
+* Useful Link You can find a list of all the named colors in R at (http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf)
+
+
+```{r}
+plot(moneyNetwork, vertex.size = 10, vertex.color = "tomato", vertex.frame.color = NA)
+```
+
+The labels are too large and blue. We can adjust label size with vertex.label.cex. We can adjust the color with vertex.label.color
+
+```{r}
+plot(moneyNetwork, vertex.size = 10, vertex.color = "tomato", vertex.frame.color = NA, vertex.label.cex = .7, vertex.label.color = "black")
+```
+
+Alternatively, if we want to get rid of the labels, we can just set vertex.label to NA.
+```{r}
+plot(moneyNetwork, vertex.size = 10, vertex.color = "tomato", vertex.frame.color = NA, vertex.label = NA)
+```
+
+Finally we can make the edges smaller and curved to give them a nicer aesthetic.
+
+```{r}
+plot(moneyNetwork, vertex.size = 10, vertex.color = "tomato", vertex.frame.color = NA, vertex.label.cex = .7,  vertex.label = NA, edge.curved = .1, edge.arrow.size = .3, edge.width = .7)
+```
+But don’t go too crazy! If you set edge.curved to be greater than .1, it will start to look like spaghetti.
+```{r}
+plot(moneyNetwork, vertex.size = 10, vertex.color = "tomato", vertex.frame.color = NA, vertex.label.cex = .7,  vertex.label = NA, edge.curved = 1.7, edge.arrow.size = .3, edge.width = .7)
+```
+
+### Layouts
+An essential part of a network visualization is its layout, which determines the nodes’ positions in the plot. There are a wide range of layouts that have been developed for social network analysis. They all try to minimize the number of edges that cross, but use different algorithms for achieving this goal. Generally, I use either the Kamada Kawai algorithm or the Fruchterman Reingold algorithm.
+
+igraph has set of layout functions which, when passed a network object, return an array of coordinates that can then used when plotting that network. These coordinates should be saved to a separate R object, which is then called within the plot function. They all have the format: layout DOT algorithm name. For example, layout.kamada.kawai() or layout.fruchterman.reingold()
+
+* Kamada Kawai
+```{r}
+# first we run the layout function on our graph
+kamadaLayout <- layout.kamada.kawai(moneyNetwork)
+
+# and then we change the default layout setting to equal the layout we generated above
+plot(moneyNetwork, layout = kamadaLayout, vertex.size = 10, vertex.color = "tomato", vertex.frame.color = NA, vertex.label.cex = .7,  vertex.label = NA, edge.curved = .1, edge.arrow.size = .3, edge.width = .7)
+```
+
+* Frucherman-Reingold
+```{r}
+# first we run the layout function on our graph
+fruchtermanLayout <- layout.fruchterman.reingold(moneyNetwork)
+
+# and then we change the default layout setting to equal the layout we generated above
+plot(moneyNetwork, layout = fruchtermanLayout, vertex.size = 10, vertex.color = "tomato", vertex.frame.color = NA, vertex.label.cex = .7, vertex.label = NA, edge.curved = .1, edge.arrow.size = .3, edge.width = .7)
+```
+
+###  Adding attributes to a network object
+We can affect any of these aesthetics arbitrarily. You might prefer the way networks look when the edges are curved as opposed to straight for example. However, we often make decisions informed by theories we have about our empirical setting. If we think that race is important to the structure of the network, we might color nodes according to race. If we think both race and gender are important, we could color nodes by race and change the shape of nodes by gender. We could also size nodes according to wealth. We are generally limited to visualizing three attributes of nodes at once (using color, shape and size), though I find that anything more than two (color and size) is difficult to interpret.
+
+It follows that, to visualize how attributes are distributed over the nodes of the network, most network projects need two separate datasets. In addition to creating and loading a dataset of relations, which we covered in the previous tutorial, we need a second dataset that details actors’ attributes and we need to add the data to our network. Deciding wich attributes are relevant will depend on the domain and your research question; if you are studying gangs in the southside Chicago, you might record actors’ gang affiliations and residence; if you are interested in the business relationships between Saudi elites, you might record their age and lineage.
+
+Let’s return to Excel and build an attribute dataset for our network. This kind of dataset is much more traditional: each row is a person (otherwise known as an observation) and each column accords with some attribute you measured for that person. Here is a picture of an example attribute dataset I made for my family’s money provision network.
+
+* Hoffman family attributes
+
+
+![Fig23](attribute_df.png)
+I saved this attribute dataset as a .csv file inside of my R directory. I will load it into R, just as I did the edgelist in the previous tutorial (all of this should be practiced and familiar! if not, revisit the previous tutorial).
+
+```{r}
+attributes <- read.csv("attribute_df.csv", stringsAsFactors = F)
+head(attributes)
+```
+This gives us a data.frame, where each row corresponds to a person and each column corresponds to one attribute of the people in our network, but to use these attributes in igraph, we have to assign them to the nodes in the igraph object (moneyNetwork, that is).
+
+Attributes in igraph are assigned to nodes and edges separately. As mentioned in the previous tutorial, vertices are accessed using the V() function while edges are accessed with the E() function. Attributes are then accessed with the dollar sign operator followed by the attribute name. For example, as we showed earlier, V(countrysideNetwork)$name will tell us the names of all of the nodes in the network. To change an attribute, we can just use the equals sign to set them equal to something else. So for example, here I change the names of the nodes in my network
+```{r}
+# Change the names
+V(moneyNetwork)$name = c("Bob", "Linda", "Elias", "Catherine", "Eloise", "Pumpkin")
+
+# Print the node names to see that it worked!
+print(V(moneyNetwork)$name)
+```
+At the moment, our network doesn’t have any attributes other than name. If we try to look at the sex of our nodes, we will get NULL as a result.
+
+```{r}
+V(moneyNetwork)$gender[1:6]
+```
+We therefore need to attach the attributes from our attribute file to our network. The method for doing can be a bit complicated.
+
+If we have an edge list, we can use the _from_data_frame() function instead of graph.edgelist(), and include the attributes file as the vertices argument. For whatever reason, in this case, the edge list needs to be a data.frame, so no need to convert it to a matrix. Also, it is important to note that igraph assumes that the first column is the name column, so make sure that is the case!
+
+```{r}
+# Load in the edge list again
+money_edgelist <- read.csv("money_edgelist.csv", stringsAsFactors = F)
+
+# Load in the attributes again
+attributes <- read.csv("attribute_df.csv", stringsAsFactors = F)
+
+# Put them both in the network.
+moneyNetwork <- graph_from_data_frame(money_edgelist, directed = T, vertices = attributes)
+```
+
+Now, if we look at our network, we will see that there are many more next to attr.
+```{r}
+moneyNetwork
+```
+We can look at each one with the V()$ function. For example, here is gender.
+```{r}
+V(moneyNetwork)$Gender 
+```
+
+### Plotting based on attributes
+In the last section, we imported attributal data into our network object, which will allow us to manipulate our network according to nodal attributes. Let’s start by manipulating color according to gender
+
+To do this we have to assign colors to people according to their sex. We use the ifelse function. The ifelse() function takes three arguments. The first is a test (something that evaluates to TRUE or FALSE), the second is what to return if the test is TRUE and third is what to return if the test is FALSE.
+
+We therefore set up an ifelse function, which tests whether a node’s gender is male, assigning it the color “blue” if TRUE (i.e. if they are a male) and “green” if FALSE (i.e. otherwise/they are a female). Remember that R is case sensitive, so if your gender variable contains “Males” and “Females”, then make sure you put Male or Female (capitalized) in the ifelse statement.
+
+```{r}
+V(moneyNetwork)$color <- ifelse(V(moneyNetwork)$Gender == "Male", "dodgerblue3","seagreen")
+moneyNetwork
+```
+Now we can replot the network. This time a node’s color will be green or blue depending on their gender. Notice that I didn’t set the vertex.colors inside the plot function this time, since doing so would override the colors we just gave the nodes.
+
+```{r}
+plot(moneyNetwork, vertex.size = 10, vertex.frame.color = "black", vertex.label.cex = .7, vertex.label = NA, edge.curved = .1, edge.arrow.size = .3)
+```
+
+Now let’s try role. First, I reset color. There are four roles (Father, Mother, Son, Daughter), so we need a few more ifelse statements to code for all of them.
+
+```{r}
+V(moneyNetwork)$color <- NA
+V(moneyNetwork)$color <- ifelse(V(moneyNetwork)$Role == "Father", "burlywood1","tomato")
+V(moneyNetwork)$color <- ifelse(V(moneyNetwork)$Role == "Mother", "seagreen", V(moneyNetwork)$color)
+V(moneyNetwork)$color <- ifelse(V(moneyNetwork)$Role == "Son", "grey70", V(moneyNetwork)$color)
+
+plot(moneyNetwork,vertex.size = 10, vertex.label.cex = .7, vertex.label = NA, edge.curved = .1, vertex.frame.color = "black", edge.arrow.size = .3, edge.width = .7, edge.color = "grey30")
+```
+
+Last but not least, let’s adjust the sizes of the nodes so that they reflect differences in age. We can set node size to be 1/5th of the node’s age with the code below. Simple, but effective. It looks like the oldest nodes give to the most people.
+
+```{r}
+V(moneyNetwork)$size = V(moneyNetwork)$Age/5
+
+plot(moneyNetwork, vertex.label.cex = .7, vertex.label = NA, edge.curved = .1, vertex.frame.color = "black", edge.arrow.size = .3, edge.width = .7, edge.color = "grey30")
+```
+
+## 2.4. Ego Networks
+In this section, we analyze ego networks from the GSS network module in 2004. We will use the GSS data to become acquainted with measures of network density and heterogeneity. It will also teach us how to analyzing many networks all at once. In some cases, you might have hundreds of complete networks - for example, data about high schools often has networks from many different high schools. Since the schools are separate, you have to analyze them separately, but doing so one by one is laborious. Here we will learn about ego networks as well as strategies for apply the same function to many networks at once.
+
+We begin by reading in the data from the GSS network module, which I have included in the “Data” section of the materials for this class.
+
+```{r}
+library(igraph)
+gss <- read.csv("https://raw.githubusercontent.com/mahoffman/stanford_networks/main/data/gss_local_nets.csv", stringsAsFactors = TRUE) 
+```
+Let’s have a look at the data. You can either click on it in your environment, type View(gss) or:
+
+```{r}
+head(gss)
+```
+
+There are 42 variables. The first five concern the attributes of a given respondent: their sex, age, race, partyid and religion. The next 36 make up the “network” part of the GSS Network Module. The structure can be a bit confusing, especially if you haven’t read any papers that use this data. The basic idea of the module was to ask people about up to five others with whom they discussed “important matters” in the past six months. The respondents reported the number of people whom they discussed “important matters”: which is the variable “numgiven” in our dataset. They were also asked to detail the relations between those five people: whether they were especially close, knew each other, or were total strangers. This accords to the close variables in the dataset, where, for example, close12 is the closeness of person 1 to person 2, for each respondent. Finally they were asked about the attributes of each of the up to five people in their ego network (sex, race, age).
+
+To see why these are called ego networks, let’s take a respondent and graph the relations of the up to five people they said they discussed “important matters” with. To do so, we have to first turn the variables close12 through close45 into an edge list, one for each respondent.
+
+This requires a tricky bit of code. First we use grepl to extract the columns we want. grep basically uses string matching, so it looks through the column names and identifies those with the word “close” in them (look here for more information: https://www.regular-expressions.info/rlanguage.html)
+
+```{r}
+ties <- gss[,grepl("close", colnames(gss))]
+head(ties)
+```
+
+As an example of what we will do for each respondent, let’s first make a matrix, which we can fill in with the closeness values for a given respondent.
+
+```{r}
+mat = matrix(nrow = 5, ncol = 5)
+```
+As it turns out, we can assign a person’s close values directly to the lower triangle of the matrix. Here we do it for respondent 3.
+
+```{r}
+mat[lower.tri(mat)] <- as.numeric(ties[3,])
+```
+nd we can symmetrize the matrix since the relation here (closeness) is mutual (i.e. the relation is undirected).
+
+```{r}
+mat[upper.tri(mat)] = t(mat)[upper.tri(mat)]
+mat
+```
+
+Nice! Now let’s drop any of the respondents who are missing.
+
+```{r}
+na_vals <- is.na(mat)
+non_missing_rows <- rowSums(na_vals) < nrow(mat)
+mat <- mat[non_missing_rows,non_missing_rows]
+```
+
+And set the diagonal to zero, since NAs give igraph trouble
+
+```{r}
+diag(mat) <- 0
+```
+How does it look? Perfectly symmetrical, like all undirected graphs should be!
+
+```{r}
+mat
+```
+Great! We can use this matrix to creat a network for a single respondent, like we did in the last tutorial but this time using the graph.adjacency function since our input data is a matrix. We will specify that we want it to be undirected and weighted.
+
+```{r}
+ego_net <- graph.adjacency(mat, mode = "undirected", weighted = T)
+```
+
+How does it look?
+```{r}
+plot(ego_net, vertex.size = 30, vertex.label.color = "black", vertex.label.cex = 1)
+```
+
+Cool.. the only problem is that we have to do this for every row in the dataset… what should we do? One option is to create a function, which uses the code above to turn any row in the ties data set into an ego network, and then apply that function to every row in the data. Below is such a function!
+```{r}
+make_ego_nets <- function(tie){
+  # make the matrix
+  mat = matrix(nrow = 5, ncol = 5)
+  # assign the tie values to the lower triangle
+  mat[lower.tri(mat)] <- as.numeric(tie)
+  # symmetrize
+  mat[upper.tri(mat)] = t(mat)[upper.tri(mat)]
+  # identify missing values
+  na_vals <- is.na(mat)
+  # identify rows where all values are missing
+  non_missing_rows <- rowSums(na_vals) < nrow(mat)
+  
+  # if any rows 
+  if(sum(!non_missing_rows) > 0){
+    mat <- mat[non_missing_rows,non_missing_rows]
+  }
+  diag(mat) <- 0
+  ego_net <- graph.adjacency(mat, mode = "undirected", weighted = T)
+  return(ego_net)
+}
+```
+
+Now we can use lapply to loop through all of the rows in the data and apply the above function to each row. It will return a list of size nrow(ties), in which every item is an ego net of one of the respondents in the data.
+```{r}
+ego_nets <- lapply(1:nrow(ties), 
+                   FUN = function(x) make_ego_nets(ties[x,]))
+
+head(ego_nets)
+```
+Awesome! We have a whole list of networks. Let’s take a look at a random network, say, the 1001st ego net.
+
+```{r}
+random_ego_net <- ego_nets[[1021]]
+plot(random_ego_net)
+```
+
+## 2.5. Calculating Network Size and Density
+Now that we have a list of networks, we can apply the same function to each network using a single line of code, again with the help of lapply. Network size is the number of nodes in a network. To find this, we use the vcount() function. We can also find the number of edges using ecount()
+
+```{r}
+network_sizes <- lapply(ego_nets, vcount)
+network_edge_counts <- lapply(ego_nets, ecount)
+
+head(network_sizes)
+```
+We can take the mean of one of these results simply by turning the list into a vector and using the mean function on the resulting vector.
+
+```{r}
+network_sizes <- unlist(network_sizes)
+mean(network_sizes, na.rm = T)
+```
+The average network has a little over one and a half people in it. We could similarly plot the distribution.
+```{r}
+hist(network_sizes, main = "Histogram of Ego Network Sizes", xlab = "Network Size")
+```
+And, naturally, we can do the same for edges.
+```{r}
+network_edge_counts <- unlist(network_edge_counts)
+hist(network_edge_counts, main = "Histogram of Ego Network Edge Counts", xlab = "# of Edges")
+```
+
+Finally, let’s try density. Density captures how many edges there are in a network divided by the total possible number of edges. In an undirected network of size N, there will be (N * (N-1))/2 possible edges. If you think back to the matrix underlying each network, N * N-1 refers to the number of rows (respondents) times the number of columns (respondents again) minus 1 so that the diagonal (i.e. ties to oneself) are excluded. We divide that number by 2 in the case of an undirected network only to account for that fact that the network is symmetrical.
+
+We could calculate this on our own for the random ego network from before as follows.
+
+```{r}
+ecount(random_ego_net)/((vcount(random_ego_net) * (vcount(random_ego_net) - 1))/2)
+```
+igraph has its own function - graph.density which we can again apply to every ego network in the data.
+
+
+```{r}
+densities <- lapply(ego_nets, graph.density)
+densities <- unlist(densities)
+```
+
+To end the tutorial, let’s plot the distribution of density across the different ego networks.
+
+```{r}
+hist(densities)
+```
+
+## 2.6. Affiliation Data
+This portion of the tutorial focuses on affiliation data. Individuals can be directly linked to one another by affections or interactions. We have spent the tutorial so far working with direct, one-mode networks.
+
+That said, individuals can also be linked through “affiliations”, that is, shared associations to groups or objects.
+
+As an example, people might be tied by the classes they have taken together. Such data might look like:
+
+Person, Classes Leo, Biostatistics, Chemistry, Linear Algebra Clement, Islamic Civilization, The Modern World-System, Exile and Diaspora Paula, Calc 1, Calc 2, Linear Algebra, Filippo, Linear Algebra, Social Networks, The Modern World-System
+
+We can create a network with two types of nodes - one set of nodes will be people, the other classes. People, in this network, cannot be directly tied to each other. Rather they are co-affiliated with a class, which serves as the basis of their connection. Therefore, all ties will be between nodes of different types.
+
+To create this network, we need to turn the above data into an edgelist, convert it to a matrix, and plot it in igraph.
+
+Let’s start with the data.
+
+```{r}
+library(igraph)
+
+classes_data <- data.frame(name = c("Leo", "Clement", "Palla", "Filippo"), class1 = c("Biostatistics","Islamic Civ", "Calc 1", "Linear Algebra"), class2 = c("Chemistry", "The Modern World-System", "Calc 2", "Social Networks"), class3 = c("Linear Algebra", "Exile and Diaspora", "Linear Algebra", "The Modern World-System"), stringsAsFactors = FALSE)
+
+classes_data
+```
+The reshape packages will let us convert this type of data into an edgelist.
+
+```{r}
+# install.packages("reshape2")
+library(reshape2)
+classes_data <- melt(classes_data, measure.vars = c("class1", "class2","class3"), value.name = "classes", variable.name = "order")
+```
+The ?melt function turns so called “short form data” into “long form”. It takes the class variables and combines them into a single variable “classes”. We only need two columns, name and classes, so we use the subset function to select them. If we look at the data now, it is basically an edge list, in which people are on the left side and classes they are affiliated with on the right.
+
+```{r}
+classes_data <- subset(classes_data, select = c("name", "classes"))
+```
+Once we have such an edge list, we can then use the table function to turn it into an incidence matrix, which is what igraph needs to turn affiliation data into an igraph object.
+
+```{r}
+classesMatrix = table(classes_data)
+class(classesMatrix) <- "matrix" # And we convert it from a table to a matrix
+
+# View(classesMatrix)
+```
+
+In an incidence matrix, the rows are of one class of node, while columns are of another. The rows are generally people who are affiliated with groups in the columns.
+
+Using the get.incidence() function will turn our matrix into a bipartite network.
+
+```{r}
+classesNet <- graph.incidence(classesMatrix, mode = c("all"))
+plot(classesNet, vertex.label.cex = .6, vertex.label.color = "black")
+```
+
+We can change the shape of nodes to highlight their type.
+
+```{r}
+V(classesNet)$shape <- ifelse(V(classesNet)$type == FALSE, "circle", "square")
+plot(classesNet, 
+vertex.label.cex = .6, 
+vertex.label.color = "black")
+```
+
+
+###  Unipartite Projection
+Bipartite networks can be represented (or “projected”) as unipartite networks. In this case, either people will be the only nodes, and they will be connected if they share an affiliation (i.e. they are in the same group) OR groups willbe the only nodes and they will be connected if they share an affiliation to a person.
+
+We can make the projection two ways - using the bipartite.projection() function in igraph, or by multiplying the incidence matrix by its transpose (or vise versa).
+
+The mathematical operation to make a person-to-person projection is to multiply the initial matrix by its transpose. In R that looks like:
+
+```{r}
+personMatrix = classesMatrix %*% t(classesMatrix) 
+# View(personMatrix)
+```
+
+where the t() function transposes the matrix that is passed to it and %*% performs matrix multiplication.
+
+The diagonal of this new matrix tells us the number of groups each person is affiliated with, but we set it to 0 using the ?diag function.
+```{r}
+number_of_classes_taken = diag(personMatrix)
+diag(personMatrix) <- 0 
+# View(personMatrix)
+
+personNet <- graph.adjacency(personMatrix, mode = "undirected")
+
+plot(personNet, vertex.size = 8, vertex.label.cex = .8, vertex.label.color = "black")
+```
+
+To get the group-to-group matrix, we multiply the transpose by the initial matrix (reverse!)
+```{r}
+groupMatrix = t(classesMatrix) %*% classesMatrix
+# View(groupMatrix) # The diagonal details the number of people in each class
+
+number_of_students <- diag(groupMatrix)
+
+diag(groupMatrix) <- 0 # we again set it to 0
+```
+Both of these operations turn our rectangular incidence matrix into a square adjacency matrix. Order matters. Now that we have adjacency matrices can use the graph.adjacency() function to turn them into network objects.
+```{r}
+personNet <- graph.adjacency(personMatrix, mode = "undirected")
+groupNet <- graph.adjacency(groupMatrix, mode = "undirected")
+
+plot(personNet, vertex.label.cex = .6, vertex.label.color = "black")
+```
+
+```{r}
+groupMatrix = t(classesMatrix) %*% classesMatrix
+# View(groupMatrix) # The diagonal details the number of people in each class
+
+number_of_students <- diag(groupMatrix)
+
+diag(groupMatrix) <- 0 # we again set it to 0
+groupMatrix = t(classesMatrix) %*% classesMatrix
+# View(groupMatrix) # The diagonal details the number of people in each class
+
+number_of_students <- diag(groupMatrix)
+
+diag(groupMatrix) <- 0 # we again set it to 0
+
+plot(groupNet, vertex.size =igraph::betweenness(groupNet)/max(igraph::betweenness(groupNet)) * 10, vertex.label.cex = .6, vertex.label.color = "black")
+
+```
+###  Tripartite network analysis?
+What if we wanted to analyze data from a third mode or level? For example, classes are not run independently, rather they nested in departments and schools, which govern curricula and student enrollment. Adding additional modes can allow us to trace multilevel linkages. Here is a quick example that we will build on in later classes.
+
+First, we will build a classes to departments matrix.
+
+```{r}
+classes_to_departments <- data.frame(class = c("Biostatistics","Islamic Civ", "Calc 1", "Linear Algebra", "Chemistry", "The Modern World-System", "Calc 2", "Social Networks", "Exile and Diaspora"), department = c("Math", "History", "Math", "Math", "Chemistry", "Sociology", "Math", "Sociology", "History"), stringsAsFactors = F)
+
+classes_to_departments_matrix <- table(classes_to_departments)
+class(classes_to_departments_matrix) <- "matrix"  
+```
+
+Now following the paper on tripartite structural analysis, we can multiply the transpose of this matrix by the transpose of classesMatrix to trace links between people and departments!
+
+```{r}
+people_to_departments <- t(classes_to_departments_matrix) %*% t(classesMatrix)
+```
+
+
+We can graph this matrix and analyze it like a bipartite graph.
+
+```{r}
+people_to_departments_net <- graph.incidence(people_to_departments)
+plot(people_to_departments_net, vertex.label.cex = .6, vertex.label.color = "black")
+```
+
+
+## 2.7. Transitivity, structural balance, and hierarchy
+The main goal of this tutorial is to delve more deeply into the microfoundations of networks, such as dyads and tryads. We will learn the basic functions for measuring reciprocity, transitivity, the triad census, and for identifying cliques. We will also learn how to “ban” triads from a graph, and begin to think about whether our graphs deviate, in a statistical sense, from what we might expect by chance, one way of evaluating whether our results are “meaningful”.
+
+Through this tutorial, we will rely on igraph to analyze the comm59 Add Health network that we made use of last class.
+```{r}
+# read in the edge list from our github
+el <- read.table("https://raw.githubusercontent.com/mahoffman/stanford_networks/main/data/comm59.dat.txt", header = T)
+# Read in attributes from our github
+attributes <- read.table("https://raw.githubusercontent.com/mahoffman/stanford_networks/main/data/comm59_att.dat.txt", header = T)
+# add an ID column
+attributes$ID <- 1:nrow(attributes)
+```
+
+Next let’s graph it as a network, ignoring the ranking of friendships for now.
+
+```{r}
+# First read in igraph
+library(igraph)
+
+# Indexing data so that you only put in certain columns
+el_no_weight <- el[,1:2] # We will ignore the ranking variable for now.
+el_no_weight <- as.matrix(el_no_weight) # igraph requires a matrix
+
+# convert ids to characters so they are preserved as names
+el_no_weight[,1] <- as.character(el_no_weight[,1])
+el_no_weight[,2] <- as.character(el_no_weight[,2])
+
+# Graph the network
+net59 <- graph.edgelist(el_no_weight, directed = T)
+
+# Finally, add attributes  
+# First link vertex names to their place in the attribute dataset
+linked_ids <- match(V(net59)$name, attributes$ID)
+
+# Then we can use that to assign a variable to each user in the network
+V(net59)$race <- attributes$race[linked_ids]
+V(net59)$sex <- attributes$sex[linked_ids]
+V(net59)$grade <- attributes$grade[linked_ids]
+V(net59)$school <- attributes$school[linked_ids]
+
+net59 # Great!
+```
+
+### The Dyad
+We can break large social networks down into their constituent parts. These constituent parts are referred to as “motifs”. The most basic motif consists of two nodes and is called a dyad. Edges in a network signify the presence or absence of dyadic relations. It follows that a dyad in an undirected network can have two unique configurations: connected or disconnected; and three unique configurations in a directed network (mutual, assymetric, and null)
+
+Density captures, at the macro-level, the proportion of dyads that are present over the possible total number of dyads in the network. We are simply re-framing what we discussed last class, except we are focusing on the configuration of nodes as opposed to edges.
+```{r}
+graph.density(net59)
+```
+A related concept is that of reciprocity, a measure which pertains only to directed graphs. Reciprocity is the tendency with which affect, or network ties, sent out by egos are returned by alters. Edges are reciprocal when ego and alter both send each other ties; reciprocity is the graph-level analogue, evaluating the tendency for edges to be reciprocal across the whole network.
+
+```{r}
+reciprocity(net59)
+```
+So our graph has a reciprocity score of 0.39. Is that high or low? It depends on your expectation. If you are from a society with a strong taboo against unrequited affect, then it might seem low. If you come from an individualistic society, it might seem high.
+
+### Generating a random graph for comparison
+One way network scholars evaluate whether a given descriptive statistic is high or low is to compare it to the value that obtains under a random network of similar density. In random graphs, the chance that any two dyads are in a relation is determined by chance (i.e. the flip of a coin). This means that the likelihood of observing a given tie is independent from observing a tie between any other dyad.
+
+There are a lot of reasons that this is unrealistic.. For example, if A and B are friends and A and C are friends, then we would expect the probability that B and C are friends to be higher. That is, you are more likely to be friends with your friends friends than with strangers. This is a basic feature of most social networks and one that was emphasized in our readings this week on transitivity. Even in dyads, if someone shows you affection you are more likely to return it. We therefore might want to factor in this human tendency towards triadic and dyadic closure into our null model - later in the class we will discuss ways of doing this. That said, random graphs have many properties that are mathematically and heuristically useful, which is why they are commonly used as null models.
+
+igraph has a fast and easy function for generating random graphs.
+
+```{r}
+?erdos.renyi.game
+```
+
+In an erdos.renyi.graph, each edge has the same probability of being created. We determine the probability and it returns a random graph with a density that equals (in expectation) this probability.
+
+First, we need to calculate the density and number of nodes in our graph.
+```{r}
+net59_n <- vcount(net59)
+net59_density <- graph.density(net59)
+```
+Then we can input those into the erdos.renyi.game function provided by igraph to generate a network of the same size and density, but with edges that are random re-arranged.
+
+```{r}
+random_graph <- erdos.renyi.game(n = net59_n, p.or.m = net59_density, directed = TRUE) # where n is the number of nodes, p.or.m is the probability of drawing an edge, directed is whether the network is directed or not
+```
+
+Let’s take a look at the graph.
+```{r}
+plot(random_graph,  
+     vertex.size = 2, 
+     vertex.label = NA, 
+     edge.curved = .1, 
+     vertex.color = "tomato", 
+     edge.arrow.size = .1, 
+     edge.width = .5, 
+     edge.color = "grey60")
+```
+
+It looks like a bowl of spaghetti - that is how you know you indeed have a random graph on your hands. What is its reciprocity?
+
+```{r}
+reciprocity(random_graph)
+```
+0.004! So our network exhibits far more reciprocity than we would expect if people were affiliating randomly.
+
+### The Triad
+Triads consist of three nodes and are therefore more complex than dyads, with more possible arrangements.
+
+This becomes clear when you realize an undirected triad consists of three dyads: A and B, B and C, and A and C.
+
+In an undirected graph, there are eight possible triads (2^3… sort of obvious given that each dyad can be present or absent and there are three dyads). Of those eight possible triads, four are isomorphic, so that there are four unique triads.
+
+In an directed graph, there will be sixteen unique triads (the unique number of motifs in directed graphs is not easily reduced to a functional form). These sixteen unique triads give rise to the MAN framework as well as the triad census, which we discussed in class.
+
+The triad census calculates how many triads there are of each type (which, as I just mentioned, in a directed network amounts to 16). If we see a network with very few complete (003) triads, then we know something about the macro-level structure, just by looking at the frequencies of its constituent parts at the micro-level. By extension, if the whole distribution of triads is very different than the distribution that obtains under a random network, then we hopefully learn something about the macro-level structure that we couldn’t observe just by looking at a visualization of the network.
+
+### Calculating a triad census
+igraph has a built in function for the triad census: triad.census()
+
+It takes a network object as an argument and returns the number of each type of triad in the network.
+
+```{r}
+igraph::triad.census(random_graph)
+
+```
+As you can see, it returns 16 different numbers. It uses the M-A-N classification structure: M stands for the number of Mutual ties, A stands for the number of Asymmetric ties, and N stands for the number of Null ties.
+
+Mutual means that ego and alter (say A and B) have a mutual relation with each other (A likes B and B likes A). A means that ego and alter have an asymmetric relation with one another, i.e. A likes B but B doesn’t like A… the relation is not reciprocated. Finally, N means that A and B do not have any relation.
+
+The image below visualizes the different types of triads possible in a directed graph.
+
+![Fig26](triad_census.jpg)
+?triad.census also describes these possible types, telling you the order that the triad types are presented in the triad.census() output.
+
+003 for example means there are 0 mutual relation, 0 asymmetric relations and 3 null relations. This triad contains no relations. 201 would mean there are two mutual relations, zero asymmetric relations, and 1 null relation. Of three dyads in the triad, two dyads are in a relation, and one dyad is not.
+
+For now let’s look at the triad census of our random graph.
+
+
+```{r}
+igraph::triad.census(random_graph)
+```
+
+Most triads are null. This is because edges only have a 5% chance of being drawn. It follows that 95% of the total possible edges are missing.
+
+There are not many cases of transitive triads, or even in which all three dyads have a relationship. Thus, the majority of triads are concentrated in the left side of the triad distribution
+
+Let’s compare it our Add Health network.
+
+```{r}
+igraph::triad.census(net59)
+```
+Which triads are common in our network, but not in the random graph? What might this tell us?
+
+### Random graphs galore!
+One problem is that we are basing our analysis on a single random graph. Because edges are drawn randomly, there is a lot of variation in the structure of random graphs, especially when the number of nodes in the graph is small (less than one thousand).
+
+What we really want is a distribution of random graphs and their triad censuses, against which our own could be compared. So let’s generate one hundred random graphs, and create a distribution of random graph triad censuses and see where our graph lies on that distribution
+
+```{r}
+trial <- vector("list", 100) # this creates a list with 100 spaces to store things.  We will store each result here. 
+
+for ( i in 1:length(trial) ){
+  random_graph <- erdos.renyi.game(n = net59_n, p.or.m = net59_density, directed = TRUE) 
+  trial[[i]] <- igraph::triad.census(random_graph) # We assign to the ith space the result. So for the first iteration, it will assign the result to the first space in the list
+}
+
+trial_df <- do.call("rbind", trial) # We can use the do.call and "rbind" functions together to combine all of the results into a matrix, where each row is one of our trials
+
+colnames(trial_df) <- c("003", "012", "102", "021D", "021U", "021C", "111D", "111U", "030T", "030C", "201", "120D", "120U", "120C", "210", "300") # It is worth naming the columns too.
+
+trial_df_w_observed <- rbind(trial_df, as.numeric(igraph::triad.census(net59))) # add in the observed results
+```
+
+Now we have this 100 row dataset of simulation results with the observed results tacked on at the end (of course, we could have done 1,000 or 10,000 iterations!) Let’s produce, for each column, some simple statistics, like a mean and a confidence interval.
+
+```{r}
+# First, standardize all of the columns by dividing each of their values by the largest value in that column, so that each will be on a similar scale (0 to 1), we can visualize them meaningfully 
+trial_df_w_observed <- as.data.frame(trial_df_w_observed)
+
+trial_df_w_observed[,1:ncol(trial_df_w_observed)] <- sapply(trial_df_w_observed[,1:length(trial_df_w_observed)], function(x) x/max(x))
+
+# Then split the observed from the simulation results
+trial_df <- as.data.frame(trial_df_w_observed[1:100,])
+observed <- as.numeric(trial_df_w_observed[101,])
+
+# Summarize the simulation results and add the observed data set back in for comparison
+summarized_stats <- data.frame(TriadType = colnames(trial_df), 
+                               Means = sapply(trial_df, mean), 
+                               LowerCI = sapply(trial_df, function(x) quantile(x, 0.05)),
+                               UpperCI = sapply(trial_df, function(x) quantile(x, 0.95)), 
+                               Observed = observed) 
+
+summarized_stats
+```
+
+Now that we have this dataset, we can use ggplot to plot it.
+```{r}
+library(ggplot2)
+ggplot(summarized_stats) + 
+    geom_point(aes(x=TriadType, y=Means, colour=TriadType)) + 
+    geom_errorbar(aes(x = TriadType, ymin=LowerCI, ymax=UpperCI, colour=TriadType), width=.1) +
+    geom_point(aes(x=TriadType, y=Observed, colour="Observed")) +
+    coord_flip()
+```
+
+Beautiful! What do you see? Which triads are more or less common in our graph than in a random graph? What might this tell us about the macro-structure?
+
+###  Producing a tau statistic
+Given a weighting scheme, which values some triads and not others, we can evaluate whether our network fits a macrolevel model of our choice. For example, below is a weighting scheme for the ranked-clustering weighting scheme, drawn from Daniel A. McFarland, et al. “Network Ecology and Adolescent Social Structure”. We can compare this to that produced by a random graph to see if our tau count is more or less than we should expect by chance.
+
+```{r}
+weighting_scheme <- c(0,0,0,1,1,-1,0,0,1,0,0,1,1,0,0,0)
+
+sum(igraph::triad.census(net59) * weighting_scheme)
+```
+###  Banning triads
+What if we want to ban some triads, but allow others? How might we go about building a simulation that does that? Below is an example. The basic idea is to sample nodes, draw an edge randomly with some probability (i.e. to control density), and then choose to keep or delete that edge, depending on if the triangles that it produces are allowed or not.
+```{r}
+# A basic function which prevents the formation of specified triads in a random graph simulation
+banning_triads_game = function(n = 100, porm = .05, banned = c(2), sim_max = 1000000, probrecip = .5){
+  
+  require(igraph) # Ensures igraph is loaded
+  
+  if(any(c(1) %in% banned)){
+    stop("Can't ban 003s") # Stops the simulation if the user tried to bad 003 or 012 triads
+  }
+  
+  num_edges = round(n*(n-1)*porm, 2) # calculates the desired number of edges according to the N and Porm parameters
+  
+  net = igraph::make_empty_graph(n = n, directed = TRUE) # initializes an empty network
+
+  edge_count = 0
+  sim_count = 0
+  
+  while(edge_count < num_edges){ # Begins a loop, which ends once the requisite number of edges is reached. 
+    
+    # This part samples two nodes, checks whether the two sampled nodes are the same node, and whether an edge is already present in the network between these nodes
+    
+    uniq = TRUE
+    edge_present = TRUE
+    while(uniq == TRUE | edge_present == TRUE){
+      edge_id = sample(1:n, 2, replace = T)
+      uniq = edge_id[1] == edge_id[2]
+      reciprocated = sample(c(FALSE, TRUE), 1, prob = c(1-probrecip, probrecip))
+      edge_present_1 = are.connected(net, edge_id[1], edge_id[2])
+      if (reciprocated){
+        edge_present_2 = are.connected(net, edge_id[2], edge_id[1])
+        edge_present = edge_present_1|edge_present_2
+      } else {
+        edge_present = edge_present_1
+      }
+    }
+    
+    # Calculates the traid census for the network before adding an edge
+    before = igraph::triad.census(net)
+    net_new = net + edge(edge_id) # Adds in the edge
+    if(reciprocated){
+      edge_id_rev = edge_id[2:1]
+      net_new = net_new + edge(edge_id_rev) # Adds in the edge
+    }
+    after = igraph::triad.census(net_new) # Calculates the triad census again
+    triad_diff = after - before # Checks to see how much the triad census changed
+    
+    if(all(triad_diff[banned] == 0)){
+      net = net_new # If the banned triads still aren't observed, then the new network is accepted.
+    }
+    
+    edge_count = ecount(net) # number of edges updated
+    sim_count = sim_count + 1 # Simulation count updated
+    if(sim_count > sim_max){
+      print("Warning: Failed to converge, banned triads may be incompatible") # exits simulation if simulation max count is exceeded
+      return(net)
+    }
+  }
+  return(net) # Returns the simulated network
+}
+```
+
+Cool - let’s try it. Here, we ban three triad types.
+```{r}
+no_cycles = banning_triads_game(banned = c(4,5,7))
+igraph::triad_census(no_cycles)
+```
+```{r}
+plot(no_cycles, vertex.size = 2, vertex.label = NA, vertex.color = "tomato", edge.arrow.size = .2)
+```
+
+## 2.8.Centrality
+In this tutorial, we look at measures of network centrality, which we use to identify structurally important actors. We also discuss possible ideas for identifying important edges.
+
+Centrality originally referred to how central actors are in a network’s structure. It has become abstracted as a term from its topological origins and now refers very generally to how important actors are to a network. Topological centrality has a clear definition, but many operationalizations. Network “importance” on the other hand has many definitions and many operationalizations. We will explore the possible meanings and operationalizations of centrality here. There are four well-known centrality measures: degree, betweenness, closeness and eigenvector - each with its own strengths and weaknesses. The main point we want to make is that the analytical usefulness of each depends heavily on the context of the network, the type of relation being analyzed and the underlying network morphology. We don’t want to leave you with the impression that one is better than another - only that one might serve your research goals better than another.
+
+Every node-level measure has its graph-level analogue. Centralization measures the extent to which the ties of a given network are concentrated on a single actor or group of actors. We can also look at the degree distribution. It is a simple histogram of degree, which tells you whether the network is highly unequal or not.
+
+###  Loading the example network
+As always, we need to load igraph. We will load in tidyverse too in case we need to do some data munging or plotting.
+```{r}
+rm(list=ls())
+library(igraph)
+library(tidyverse)
+```
+
+```{r}
+library(reshape2)
+```
+
+We will use John Padgett’s Florentine Families dataset. It is part of a famous historical datset about the relationships of prominent Florentine families in 15th century Italy. The historical puzzle is how the Medici, an upstart family, managed to accumulate political power during this period. Padgett’s goal was to explain their rise.
+
+He looked at many relations. On the github, we have access to marriage, credit, and business partnership ties, but we will focus on marriage for now. Marriage was a tool in diplomacy, central to political alliances. A tie is drawn between families if the daughter of one family was sent to marry the son of another.
+
+Ron Breiger, who analyzed these data in a famous paper on local role analysis, has argued these edges should be directed, tracing where daughters were sent or where finances flowed.
+
+As always, we first load and prepare the dataset. We will do so directly from GitHub again.
+
+```{r}
+# prepare the marriage adjacency matrix
+florentine_edj <- read.csv("https://raw.githubusercontent.com/mahoffman/stanford_networks/main/data/florentine_marriage_edgelist.csv")
+florentine_edj <- florentine_edj[,2:3]
+
+# prepare the attributes file
+florentine_attributes <- read.csv("https://raw.githubusercontent.com/mahoffman/stanford_networks/main/data/florentine_attributes.csv")
+
+# graph the marriage network
+marriageNet <- graph.edgelist(as.matrix(florentine_edj), directed = T)
+V(marriageNet)$Wealth <- florentine_attributes$Gwealth[match(V(marriageNet)$name, florentine_attributes$Family)]
+
+# Gross wealth (Florins), for 87 (92) families
+# simple mean imputation of wealth (alternatively, we might think that those with NA were too poor to show up in historical records?)
+V(marriageNet)$Wealth <- ifelse(is.na(V(marriageNet)$Wealth), mean(V(marriageNet)$Wealth, na.rm = T), V(marriageNet)$Wealth)
+
+# Number of Priors, The Priorate (or city council), first created in 1282, was Florence's governing body. Count of how many seats a family had on that city council from 1282-1344
+# measure of the aggregate political influence of the family over a long period of time
+V(marriageNet)$Priorates <- florentine_attributes$Npriors[match(V(marriageNet)$name, florentine_attributes$Family)]
+```
+Let’s see how it looks.
+```{r}
+plot(marriageNet, vertex.size = 8, vertex.label.cex = .4, vertex.label.color = "black", vertex.color = "tomato", edge.arrow.size = 0.4)
+```
+Based on this plot, which family do you expect is most central?
+ 
+### Degree Centrality
+The simplest measure of centrality is degree centrality. It counts how many edges each node has - the most degree central actor is the one with the most ties.
+
+* Note: In a directed network, you will need to specify if in or out ties should be counted. These will be referred to as in or out degree respectively. If both are counted, then it is just called degree
+
+Degree centrality is calculated using the degree function in R. It returns how many edges each node has.
+
+
+```{r}
+igraph::degree(marriageNet) 
+```
+Who is the most degree central?
+
+We can assign the output to a variable in the network and size the nodes according to degree.
+
+```{r}
+V(marriageNet)$degree <- igraph::degree(marriageNet) # assignment
+
+plot(marriageNet, vertex.label.cex = .6, vertex.label.color = "black", vertex.size = V(marriageNet)$degree, vertex.label.cex = .2) # sized by degree
+```
+The problem is that the degree values are a little small to plot well. We can use a scalar to increase the value of the degree but maintain the ratio.
+
+```{r}
+plot(marriageNet, 
+     vertex.label.cex = .6, 
+     vertex.label.color = "black", 
+     vertex.size = V(marriageNet)$degree*3)
+```
+
+### Betweenness Centrality
+Betweenness centrality captures which nodes are important in the flow of the network. It makes use of the shortest paths in the network. A path is a series of adjacent nodes. For any two nodes we can find the shortest path between them, that is, the path with the least amount of total steps (or edges). If a node C is on a shortest path between A and B, then it means C is important to the efficient flow of goods between A and B. Without C, flows would have to take a longer route to get from A to B.
+
+Thus, betweenness effectively counts how many shortest paths each node is on. The higher a node’s betweenness, the more important they are for the efficient flow of goods in a network.
+
+In igraph, betweenness() computes betweenness in the network
+
+```{r}
+igraph::betweenness(marriageNet, directed = FALSE)
+```
+
+We can again assign the output of betweenness() to a variable in the network and size the nodes according to it.
+
+```{r}
+V(marriageNet)$betweenness <- igraph::betweenness(marriageNet, directed = F) # assignment
+
+plot(marriageNet, 
+     vertex.label.cex = .6, 
+     vertex.label.color = "black", 
+     vertex.size = V(marriageNet)$betweenness) # sized by betweenness
+```
+Betweenness centrality can be very large. It is often helpful to normalize it by dividing by the maximum and multiplying by some scalar when plotting.
+
+```{r}
+plot(marriageNet,
+     vertex.label.cex = .6, 
+     vertex.label.color = "black", 
+     vertex.size = V(marriageNet)$betweenness/max(V(marriageNet)$betweenness) * 20)
+```
+
+### Closeness Centrality
+With closeness centrality we again make use of the shortest paths between nodes. We measure the distance between two nodes as the length of the shortest path between them. Farness, for a given node, is the average distance from that node to all other nodes. Closeness is then the reciprocal of farness (1/farness).
+
+```{r}
+igraph::closeness(marriageNet)
+```
+We assign it to a node variable and plot the network, adjusting node size by closeness.
+
+```{r}
+V(marriageNet)$closeness <- igraph::closeness(marriageNet)
+plot(marriageNet,
+     vertex.label.cex = .6, 
+     vertex.label.color = "black", 
+     vertex.size = V(marriageNet)$closeness/max(V(marriageNet)$closeness) * 20)
+```
+
+### Eigenvector Centrality
+Degree centrality only takes into account the number of edges for each node, but it leaves out information about ego’s alters.
+
+However, we might think that power comes from being tied to powerful people. If A and B have the same degree centrality, but A is tied to all high degree people and B is tied to all low degree people, then intuitively we want to see A with a higher score than B.
+
+Eigenvector centrality takes into account alters’ power. It is calculated a little bit differently in igraph. It produces a list object and we need to extract only the vector of centrality values.
+
+```{r}
+igraph::evcent(marriageNet)$vector
+```
+Then we can assign that vector to our network and plot it.
+
+```{r}
+V(marriageNet)$eigenvector <- igraph::evcent(marriageNet)$vector
+
+plot(marriageNet,
+     vertex.label.cex = .6, 
+     vertex.label.color = "black", 
+     vertex.size = V(marriageNet)$eigenvector/max(V(marriageNet)$eigenvector) * 20)
+```
+###  Bonacich Centrality
+Perhaps marrying your daughters off to weaker families is a good way to ensure their loyalty? We could evaluate this using bonacich centrality. From igraph: “Interpretively, the Bonacich power measure corresponds to the notion that the power of a vertex is recursively defined by the sum of the power of its alters. The nature of the recursion involved is then controlled by the power exponent: positive values imply that vertices become more powerful as their alters become more powerful (as occurs in cooperative relations), while negative values imply that vertices become more powerful only as their alters become weaker (as occurs in competitive or antagonistic relations).”
+
+```{r}
+V(marriageNet)$bonacich <- igraph::power_centrality(marriageNet, exponent = -2, rescale = T)
+V(marriageNet)$bonacich <- ifelse(V(marriageNet)$bonacich < 0, 0, V(marriageNet)$bonacich)
+
+plot(marriageNet,
+     vertex.label.cex = .6, 
+     vertex.label.color = "black", 
+     vertex.size = V(marriageNet)$bonacich/max(V(marriageNet)$bonacich) * 20)
+```
+
+### Page Rank
+Here is Google’s page rank measure. It uses random walks to identify individuals who are commonly encountered along such walks. Those individuals are viewed as central.
+
+```{r}
+V(marriageNet)$page_rank <- igraph::page_rank(marriageNet, directed = TRUE)$vector
+
+plot(marriageNet,
+     vertex.label.cex = .6, 
+     vertex.label.color = "black", 
+     vertex.size = V(marriageNet)$page_rank/max(V(marriageNet)$page_rank) * 20)
+```
+###  Measure Correlations
+Most of these measures are highly correlated, meaning they don’t necessarily capture unique aspects of pwoer. However, the amount of correlation depends on the network structure. Let’s see how the correlations between centrality measures looks in the Florentine Family network. cor.test(x,y) performs a simple correlation test between two vectors.
+
+```{r}
+# extract all the vertex attributes
+all_atts <- lapply(igraph::list.vertex.attributes(marriageNet),function(x) igraph::get.vertex.attribute(marriageNet,x))
+# bind them into a matrix
+all_atts <- do.call("cbind", all_atts)
+# add column nams
+colnames(all_atts) <- igraph::list.vertex.attributes(marriageNet)
+# drop the family variable
+all_atts <- data.frame(all_atts[,2:ncol(all_atts)])
+# convert all to numeric
+all_atts <- sapply(all_atts, as.numeric)
+# produce a correlation matrix
+cormat <- cor(all_atts)
+# melt it using reshape to function melt() to prepare it for ggplot which requires long form data
+melted_cormat <- melt(cormat)
+ggplot(data = melted_cormat, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile() +
+  scale_fill_distiller(palette = "Spectral", direction=-2) +
+  xlab("") +
+  ylab("")
+```
+### Centralization and Degree Distributions
+To understand the measures further, we can look at their distributions. This will tell us roughly how many nodes have centralities of a given value.
+
+
+```{r}
+# fitting a degree distribution on the log-log scale
+alter_hist = table(igraph::degree(marriageNet))
+vals = as.numeric(names(alter_hist))
+vals = vals[2:length(vals)]
+alter_hist = alter_hist[2:length(alter_hist)]
+df = data.frame(Vals = log(vals), Hist = log(as.numeric(alter_hist)), stringsAsFactors = F)
+
+# plot log-log degree distribution
+plot(Hist ~ Vals, data = df)
+
+# regression line
+abline(lm(Hist ~ Vals, data = df))
+```
+Do their marriage partners have more marriage partners than they do?
+
+```{r}
+# degrees of your friends
+neighbor_degrees <- knn(marriageNet)$knn
+degrees <- igraph::degree(marriageNet)
+
+mean(neighbor_degrees, na.rm = T)
+```
+```{r}
+mean(degrees)
+```
+```{r}
+# plot neighbor degrees vs. ego degress
+hist(neighbor_degrees)
+```
+```{r}
+hist(degrees)
+```
+We can see that most nodes in the marriage network have low betweenness centrality, and only one node has more than 40 betweenness. Degree distributions tend to be right-skewed; that is, only a few nodes in most networks have most of the ties. Evenly distributed degree is much rarer.
+
+Finally centralization measures the extent to which a network is centered around a single node. The closer a network gets to looking like a star, the higher the centralization score will be.
+
+```{r}
+degcent <- centralization.degree(marriageNet)$centralization
+centralization.betweenness(marriageNet)$centralization
+```
+```{r}
+centralization.evcent(marriageNet)$centralization
+```
+```{r}
+centralization.closeness(marriageNet)$centralization
+```
+Can we compare our centralization scores against some baseline? Here is an example with Barabasi-Albert model, which simulates a network in which there is preferential attachment with respect to degree, the amount of which is controlled by the power parameter.
+### Reach N What proportion of nodes can any node reach at N steps?
+
+```{r}
+reach_n =function(x, n = 2){
+  r=vector(length=vcount(x))
+  for (i in 1:vcount(x)){
+    neighb =igraph::neighborhood(x, n, nodes=i)
+    ni=unlist(neighb)
+    l=length(ni)
+    r[i]=(l)/vcount(x)
+  }
+  return(r)
+}
+
+two_reach = reach_n(marriageNet, 2)
+
+plot(marriageNet, vertex.size = two_reach * 10, vertex.label.cex = .4, vertex.label.color = "black", vertex.color = "tomato")
+```
+
+```{r}
+three_reach = reach_n(marriageNet, 3)
+
+plot(marriageNet, vertex.size = three_reach * 10, vertex.label.cex = .4, vertex.label.color = "black", vertex.color = "tomato")
+```
+```{r}
+four_reach = reach_n(marriageNet, 4)
+
+plot(marriageNet, vertex.size = four_reach * 10, vertex.label.cex = .4, vertex.label.color = "black", vertex.color = "tomato")
+```
+```{r}
+five_reach = reach_n(marriageNet, 5)
+
+plot(marriageNet, vertex.size = five_reach * 10, vertex.label.cex = .4, vertex.label.color = "black", vertex.color = "tomato")
+```
+
+###  Distance weighted reach
+
+```{r}
+distance_weighted_reach=function(x){
+  distances=shortest.paths(x) #create matrix of geodesic distances
+  diag(distances)=1 # replace the diagonal with 1s
+  weights=1/distances # take the reciprocal of distances
+  return(apply(weights,1,sum)) # sum for each node (row)
+}
+
+dw_reach = distance_weighted_reach(marriageNet) 
+dw_reach = dw_reach/max(dw_reach)
+
+plot(marriageNet, vertex.size = dw_reach * 10, vertex.label.cex = .4, vertex.label.color = "black", vertex.color = "tomato")
+```
+
+## 2.9. Bridges, Holes, the Small World Problem, and Simulation
+Following our discussion, this week’s lab will focus on connectivity, bridging ties, wormholes, structural holes, and the small world problem. First, we will replicate Watts and Strogatz’s small world simulation. We will then analyze simulated small world graphs using igraph’s functions for measuring connectivity and constraint, and identifying bridging ties and articulation points (nodes whose removal would reduce the connectivity of a graph). We will conclude by looking at a couple of other simulations available in igraph.
+
+###  It’s a small world after all.
+Real-world social networks tend to be small worlds. In a small world, people are clustered in groups, but despite this, are still, on average, socially proximate. For example, you might think that you are socially (and spatially) distant from a random villager in India, but find that through a series of steps, you could reach that villager. The villager lives in her own small world and you live in yours, and yet you are mutually reachable. This is referred to as “the Small-World Phenomenon”.
+
+Duncan Watts in his landmark paper explains this phenomenon. He begins with most clustered (and yet connected graph) imaginable - a “caveman” structure. There are groups of people clustered together and connected by only one or two connections to other groups.
+
+Sadly, igraph doesn’t have a function for simulating caveman structures, so we will make use of one I wrote. In this caveman structure, all of the groups will be the same size, so the number of people must be evenly divisible by the size of groups. The basic idea is to generate a bunch of fully connected groups and then connect them by an edge or two so that they are arrayed around a circle.
+
+```{r}
+simulate_caveman <- function(n = 25, clique_size = 5){
+  require(igraph)
+  # Groups are all the same size, so I check whether N is divisible by the size of groups
+  if ( ((n%/%clique_size) * clique_size) != n){
+    stop("n is not evenly divisible by clique_size")
+  }
+  
+  groups = n/clique_size # this determines the number of groups
+  
+  el <- data.frame(PersonA = 1:n, Group = NA) # I create a dataframe which has people and the groups they are in
+  # I treat it like a person to group edgelist
+  
+  group_vector = c()
+  for (i in 1:groups){
+    group_vector <- c(group_vector, rep(i, clique_size))
+  }  
+
+  el$Group <- group_vector
+  
+  inc <- table(el) # I use the table function to turn the person to group edgelist into an incidence matrix
+  adj <- inc %*% t(inc) # And I use matrix multiplication with the transpose to turn the person to group incidence matrix
+  # into a person to person adjacency matrix
+  
+  diag(adj) <- 0 
+  
+  g <- graph.adjacency(adj, mode = "undirected") # I graph this matrix
+
+  group_connect <- seq(from = 1, to = n, by = clique_size) # I determine the points of connection using a sequence function
+  
+  for( i in 1:(length(group_connect)-1)){
+    p1 <- group_connect[i] + 1
+    p2 <- group_connect[i+1]
+    g <- igraph::add.edges(g, c(p1,p2)) # And I connect the points of connection using add.edges
+  }
+    g <- igraph::add.edges(g, c(group_connect[1],(group_connect[groups]+1))) # finally I connect the ends of the structure so that it forms a circle
+
+    return(g)    
+}
+```
+You don’t have to understand every part of this function in order to use it. All you need to do is run the function above so that it is in your R environment. You can then use it.
+
+It has two arguments - number of nodes and the size of the groups. You could change clique_size to 4 or 10.
+
+```{r}
+caveman_net <- simulate_caveman(n = 100, clique_size = 5) 
+par(mar = c(2,2,2,2))
+plot(caveman_net, layout = layout.kamada.kawai(caveman_net), vertex.size = 2, vertex.label = NA, vertex.color = "grey80")
+```
+
+Now you can clearly see what a caveman structure is. Let’s analyze it.
+```{r}
+graph.density(caveman_net)
+```
+```{r}
+transitivity(caveman_net) # transitivity() measures clustering coefficient, which essentially says, how clustered is the network overall
+```
+```{r}
+average.path.length(caveman_net)
+```
+It has a pretty low density since most nodes only have connections within their clique or else one tie outwards. And as I mentioned above, caveman structures are extremely clustered, since most edges are within group.
+
+Path length is also high - basically it takes 10 steps, on average, to reach one node from a random other node. In the real world, there are way more than 100 people and more than 20 groups, so it should be even more surprising that the average degree of separation is roughly six or seven steps. It follows that the “caveman structure” is not a small-world.
+
+We can look at the diameter of the network to see this too. The diameter is the longest shortest path.
+
+```{r}
+nodes_diameter<-get.diameter(caveman_net)
+edges_incident <- get.edge.ids(caveman_net, nodes_diameter)
+
+V(caveman_net)$color<-"grey60" # Set default color for nodes
+V(caveman_net)[nodes_diameter]$color<-"green" # Set the nodes on the diameter to be green
+
+E(caveman_net)$color<-"grey70" # Set default edge color
+E(caveman_net)[edges_incident]$color<-"green" # Set the edges on the diameter to be green
+
+plot(caveman_net, layout = layout.kamada.kawai(caveman_net), vertex.size = 2, vertex.label = NA)
+```
+Watts wants to get from this network structure, to one in which the average path length is much lower. He performs a simple exercise to do so (and one we have already experimented with). He randomly rewires the network so that it begins, slowly to approximate a random graph. Random graphs have low average path length; so this is a good idea.
+
+We end up with a caveman structure with some number of rewired edges that will have the tendency to cut across the network
+```{r}
+caveman_net_rewired <-  rewire(caveman_net, keeping_degseq(niter = 1000))
+```
+
+We can use the rewire function to rewire the network. keeping_degseq() ensures that the degree distribution does not change and niter = 20 is the number of iterations (rewirings).
+```{r}
+E(caveman_net_rewired)$color <- "grey80"
+V(caveman_net)$color <- "grey60"
+
+plot(caveman_net_rewired, layout = layout.kamada.kawai(caveman_net), vertex.size = 2, vertex.label=NA)
+```
+Most of the rewirings cut across the network structure!
+```{r}
+plot(caveman_net_rewired, layout = layout.kamada.kawai(caveman_net_rewired), vertex.size = 2, vertex.label = NA)
+```
+Let’s compare this to the caveman network.
+```{r}
+graph.density(caveman_net_rewired) 
+```
+```{r}
+transitivity(caveman_net_rewired) 
+```
+```{r}
+average.path.length(caveman_net_rewired)
+```
+Density is unchanged. Clustering coefficient is less than before, but still relatively high. And average.path.length was cut in half. Only 20 rewirings and look at the change!
+
+We can analyze the change as we perform more rewirings.
+
+```{r}
+caveman_net_rewired <- simulate_caveman(n = 100, clique_size = 10)
+avgpathlength <- average.path.length(caveman_net_rewired) # These are the first observation
+clusteringcoefficient <- transitivity(caveman_net_rewired)
+
+iter = 100
+for ( i in 2:iter){
+  caveman_net_rewired <- caveman_net_rewired %>% rewire(keeping_degseq(niter = 1))
+  avgpathlength <- c(avgpathlength, average.path.length(caveman_net_rewired)) # We are just appending the result to a vector
+  clusteringcoefficient <- c(clusteringcoefficient, transitivity(caveman_net_rewired))
+}
+
+plot(1:100, avgpathlength, xlab = "Numer of Rewirings", ylab = "Average Path Length", main = "Caveman", type = "l")
+lines(1:100, clusteringcoefficient)
+```
+```{r}
+plot(1:100, clusteringcoefficient, xlab = "Numer of Rewirings", ylab = "Clustering Coefficient", main = "Caveman", type = "l", ylim = c(0,1))
+```
+### Measuring connectivity of networks
+Let’s say that one of the small-world graphs resulting from this simulation were a real network that we had collected with an online survey.
+
+```{r}
+caveman_net_rewired <-  rewire(caveman_net, keeping_degseq(niter = 10))
+```
+
+How might we go about analyzing it, identifying things like bridges and cut-points, and evaluating the degree of its connectivity? So far we have learned a few useful measures - like the diameter, the average shortest path length, and the clustering coefficient. But there are many others too. In what follows, we’ll explore some of the options that igraph provides.
+
+First, imagine that we wanted to highlight every bridge in the network, not just the diameter. Unfortunately, igraph doesn’t have a function for identifying bridges, so we will have to build one ourselves.
+
+The basic idea is that a bridge is the only tie that connects two otherwise distinct components in a network. We can use the decompose.graph, to decompose it into its constituitive components. Then we loop through the edges in the network, deleting them one at a time, and evaluating if the number of components changes as a result of the deletion. If there is a change, then we save the edge id as a bridge, otherwise we just continue on. Finally, we return all of the bridge ids.
+
+```{r}
+bridges <- function(net){
+  bridges <- c() # empty vector to store bridge names in 
+  number_components <- length(decompose.graph(net)) # grab the number of components in the original raph
+  for (i in 1:length(E(net))) { # begin a loop through all of the edges
+    net_sub <- igraph::delete.edges(net, i) # delete the edge in question
+    if(length(decompose.graph(net_sub) ) > number_components){ # if the number of components has increased
+      bridges <- c(i, bridges)  # save this edge as a bridge
+    } 
+  }
+  return(bridges) # return the set of bridges
+}
+```
+
+Let’s try it on the caveman network.
+```{r}
+bridges(caveman_net_rewired)
+```
+Hmm, there are no bridges in our graph. I guess that makes sense - since there is a lot of redundancy in the small world graphs we saw previously So perhaps we need a different measure, which following Park et al., measures a tie’s range, rather than just whether it is a bridge or not. igraph doesn’t have that either, but we can make it ourselves. The basic idea is to again loop through the edges in a network, evaluate which vertices are incident to those edges, delete the edge in question, and evaluate how the distance between the vertices changed as a result.
+
+```{r}
+tie_range <- function(net){
+  tie_ranges <- c() # empty vector to save ranges
+  for (i in 1:length(E(net))) { # loop through edges
+    incident_vertices <- ends(net, i) # which nodes are incident to the edge in quetion
+    net_sub <- igraph::delete.edges(net, i) # delete the edge
+    updated_distance <- distances(net_sub, v = incident_vertices[1,1], to = incident_vertices[1,2], mode = "all") # evaluate the distance for the previously connected nodes
+    tie_ranges <- c(tie_ranges, updated_distance) # save the result
+  }
+  return(tie_ranges) # return the resulting tie ranges
+}
+
+tie_range(caveman_net_rewired)
+```
+Most of the edges have ranges of around 2 but a few have a range of 11 or more! Let’s plot the graph, adjusting the width of edges according to
+
+```{r}
+E(caveman_net_rewired)$color <- "grey80"
+V(caveman_net)$color <- "grey60"
+
+E(caveman_net_rewired)$range <- tie_range(caveman_net_rewired)
+
+plot(caveman_net_rewired, 
+     layout = layout.kamada.kawai(caveman_net_rewired), 
+     vertex.size = 2, 
+     vertex.label=NA, 
+     edge.width = E(caveman_net_rewired)$range/2)
+```
+It feels like we have been doing a lot of the heavy lifting here.. What, in relation to connectivity, does igraph have? Well it has a couple of interesting connectivity measures that we didn’t encounter in the literature: edge connectivity and vertex connectivity. As igraph describes, “the vertex connectivity of two vertices in a graph is the minimum number of vertices needed to remove from the graph to eliminate all paths from source to target.” The vertex connectivity of a graph is the minimum vertex connectivity of all pairs of vertices in the graph. It signifies how many vertices would need to delete, on average, to sever the connectivity between any two nodes in the network. This highlights the redundancy of the caveman graph and explains why we didn’t find any bridges.
+```{r}
+vertex_connectivity(caveman_net_rewired)
+```
+Naturally, edge connectivity of two vertices is the number of edges needed to remove from the graph to eliminate all paths between them.
+```{r}
+edge_connectivity(caveman_net_rewired)
+```
+It also has Burt’s measure of network constraint!
+
+```{r}
+constraint(caveman_net_rewired)
+```
+How correlated is it with betweenness centrality?
+```{r}
+cor.test(constraint(caveman_net_rewired), igraph::betweenness(caveman_net_rewired))
+```
+Pretty negatively correlated, which makes perfect sense.
+
+### One last thing…
+After this laborious lab, you might be annoyed to hear that igraph has its own small world simulation. It starts from a lattice structure, though, instead of a caveman. Watts and Strogatz mention in their AJS paper that the same results hold whether a lattice or caveman structure is used as the starting point of the simulation, but the caveman verion is much prettier than the lattice. Still, if you want to simulate quickly many small world graphs of size N and don’t want to deal with the limitations of the caveman simulation, this may be a good option.
+
+```{r}
+# sample_smallworld(dim, size, nei, p, loops = FALSE, multiple = FALSE)
+```
+There are some other options for simulating graphs too. Barbasi game refers to a simulation of a scale-free network, one with an unequal degree distribution (rich get richer). Last week we saw the erdos.renyi.game function, which simulates an Erdos-Renyi random graph.
+
+```{r}
+scale_free_net <- barabasi.game(100, 1, 5) # Generate a scale-free network
+random_net <- erdos.renyi.game(100, 0.05, directed = TRUE) # generate a Erdos-Renyi random graph
+```
+An alternative to the caveman network is the “interconnected islands” game: Create a number of Erdos-Renyi random graphs with identical parameters, and connect them with the specified number of edges. islands.n is the number of islands, islands.size is the number of people in each island, islands.pin is the within-island density, and n.inter is the number of edges between islands.
+```{r}
+plot(sample_islands(islands.n = 5, islands.size = 5, islands.pin = 1, n.inter = 1))
+```
+Here, game is referring to a network simulation but igraph can also simulate games on top of graphs to see how network structure affects diffusion outcomes (https://igraph.org/c/doc/igraph-Spatial-Games.html)
+
+## 2.10. Finding Groups in Networks
+Groups are one of the many tools we have for analyzing network structure. Group detection focuses on the presence of ties - in attempt to identify densly connected groups of actors. There are many different tools for doing this - we will cover four: component analysis, k-cliques, modularity, and cohesive blocking. Each method has its own uses and theoretical underpinnings, so I put citations of famous papers that use each method at the bottom of the script.
+
+
+### Component analysis
+The most basic form of network group is a component. In a connected component, every node is reachable via some path by every other node. Most network datasets have only a single large connected component with a few isolates - however, some unique datasets might have three or four large, distinct components.
+
+In a directed graph, components can be weakly or strongly connected. If node i can reach j via a directed path and j can reach i via a directed path, for all i and j nodes in the component, then we say the component is strongly connected. If all nodes are only reachable from a single direction, (i.e. i can reach j via a directed path, but j can’t reach i), then we say the component is weakly connected.
+
+The ?decompose.graph function in igraph will take a network and decompose it into its connected components. We can then analyze each component separately.
+
+```{r}
+library(igraph)
+set.seed(1234)
+
+g1 <- barabasi.game(20, 1, 5) # Generate a scale-free network
+V(g1)$name <- as.character(1:20)
+
+g2 <- erdos.renyi.game(20, graph.density(g1), directed = TRUE)
+V(g2)$name <- as.character(21:40)
+
+g3 <- graph.union(g1, g2, byname = TRUE) # The ?graph.union function combines two networks. 
+
+plot(g3, vertex.label = NA, vertex.size=2, edge.arrow.size = .1) # Two distinct networks in a single plot
+```
+Now let’s use decompose to isolate each component. There will be two components.
+```{r}
+component_list <- decompose.graph(g3, mode = "weak")
+component_list
+```
+It returns a list with two graphs in it - one for each component.
+```{r}
+par(mfrow = c(1, 2))
+plot(component_list[[1]], main = "The Scale-Free Graph", vertex.label = NA, vertex.size = 3)
+plot(component_list[[2]], main = "The Random Graph", vertex.label = NA, vertex.size = 3)
+```
+### Cliques
+Cliques are fully connected subgraphs within a network structure; they are like the caves in the caveman structure we learned about a few weeks ago. We often want to find all of the cliques in a network of various sizes. We could have a theory for example that people will dress or behave similarly or affect those in their cliques. That is, we might imagine cliques to be meaningful for the outcomes we are interested in study. We can do this with the clique function in igraph.
+
+```{r warning=FALSE}
+clique_out <- cliques(g1)
+```
+```{r}
+length(clique_out)
+```
+Quite a few… imagine the number of cliques in a really large network If we want to look for cliques of a certain size we can use the min and max arguments.
+
+```{r warning=FALSE}
+clique_four <- cliques(g1, min = 4, max = 4)
+```
+
+```{r}
+length(clique_four)/length(clique_out)
+```
+Cliques of size four make about 25% of total cliques in the network.
+
+### Cohesive Blocking
+Cohesive blocking builds on the idea of cliques. It starts at the level of the component and identifies large substructures nested within the component. It then moves to those large substructures and identifies smaller and smaller nested substructures, until it reaches cliques. It is therefore a useful way to operationalize network embeddedness. We will run it on a small world network size 20.
+
+```{r}
+g2 <- as.undirected(g2)
+g4 <- watts.strogatz.game(1, 20 , 5, .1)
+V(g4)$name <- as.character(1:20)
+
+g5 <- graph.union(g2, g4)
+```
+```{r}
+par(mfrow = c(1, 1))
+plot(g5, vertex.label = NA, vertex.size=2, edge.arrow.size = .1) # Two distinct networks in a single plot
+```
+
+The function for cohesive blocking is ?cohesive.blocks. It is very inefficient so it will take awhile to run. Run time depends on the number of edges in the network and the degree of nestedness. Don’t even bother running it on very large networks.
+```{r}
+blocks <- cohesive.blocks(g5)  # The basic function for finding cohesive blocks
+
+blocks(blocks) # This tells us what the blocks are and which nodes are in them
+
+cohesion(blocks) # This gives a cohesion score for each block. Cohesion is the minimum number of vertices you must remove in order to make the block not strongly connected.
+
+plotHierarchy(blocks) # Finally, plotHierarchy shows the nestedness structure of the blocks.
+```
+
+### Group Detection
+The previous methods for detecting groups require either that all individuals in a group are connected or that the groups are completely isolated from one another. We might wish to relax those rather stringent requirements. For example, if we randomize our g5 network, which was the union of a random graph and a watts.strogatz graph, enough times, it will connect the two separate networks with a handful of edges.
+
+```{r}
+g5 <- g5 %>% rewire(keeping_degseq(niter = vcount(g5) * 0.05))
+plot(g5, vertex.label = NA, vertex.size=2, edge.arrow.size = .1) # Two distinct networks in a single plot
+```
+Our component analysis would not reveal that there are two distinct groups - instead the whole graph would appear connected. But we know there are (at least) two groups in the network - we designed it that way - so how might we identify them? We could define groups as sets of nodes who have a higher proportion of edges going inwards rather than outwards - that is, solidarity is strongest within the group - and use that definition to search for groups.
+
+How does group detecion work? Remember the Girvan and Newman algorithm we covered in class? We can write a simple version of it in R. Here is one I wrote with comments.
+
+```{r}
+# first we create a function which defines what happens at each iteration of our algorithm
+edge_betweenness_step = function(mat){
+  # graph the matrix
+  net <- graph.adjacency(mat)
+  # evaluate edge betweenness
+  edgebets <- edge_betweenness(net)
+  # identify the edge that has the highest betweenness
+  to_delete <- which.max(edgebets)
+  # delete that edge
+  net_new <- igraph::delete.edges(net, to_delete)
+  # evaluate the number of components
+  net_new <- decompose(net_new)
+  # if the number of components grew to be greater than 1, return the matrices of those two components
+  if(length(net_new) > 1){
+    return(lapply(net_new, get.adjacency))
+  } else {
+    # otherwise return the matrix that we started with, minus the deleted edge
+    return(get.adjacency(net_new[[1]]))
+  }
+}
+
+# recursive function to measure depth of a list 
+depth <- function(this) ifelse(is.list(this), 1L + max(sapply(this, depth)), 0L)
+
+# next we will repeatedly run this step algorithm a certain number of times, at each step applying it to every component we have created
+# so at first, we start with the whole graph, we delete the highest between edges until the network is split into two components. 
+# then we apply the above to each of the network subsets
+# we do this until we have made N effective cuts
+edge_betweenness_clustering <- function(net, desired_depth = 15){
+  # required packages
+  require(reshape2)
+  # turn our net into a matrix
+  net_mat <- get.adjacency(net)
+  # run the first iteration of edge_betweenness and save the result in a list
+  net_temp <- list(edge_betweenness_step(net_mat))
+  # while actual depth is < desired_depth
+  # depth signifies how many effective cuts have been made
+  # where an effective cut is any cut that divides a component into at least two new components
+  while(depth(net_temp) < desired_depth){
+    # apply edge_betweenness recursively to every component in the list
+    net_temp <- rapply(net_temp, edge_betweenness_step, how = "list")
+  }
+  #get the row.names of every matrix (i.e. the actors who are in each component/group at the end of the iterations)
+  groups <- lapply(unlist(net_temp), row.names)
+  # name the groups according to their order
+  names(groups) <- as.character(1:length(groups))
+  # use melt to produce a person to group data.frame
+  memberships <- melt(groups)
+  # convert value (i.e. id) to a character vector from factor
+  memberships$value <- as.character(memberships$value)
+  # reorder the memberships data.frame so that it matches the order of vertices in the original network
+  memberships <- memberships[match(V(net)$name, memberships$value),]
+  # construct the communities object using this helpful function provided by igraph
+  output <- make_clusters(net, 
+                membership = as.numeric(memberships$L1), 
+                algorithm = "edge_betweenness_attempt", 
+                modularity = TRUE)
+  # return the communities object
+  return(output)
+}
+```
+
+```{r}
+mod_comparison <- c()
+for(i in 1:20){
+  mod_comparison <- c(mod_comparison, edge_betweenness_clustering(g5, i)$modularity)
+}
+plot(1:20, mod_comparison, ylab = c("Modularity"), xlab = c("Effective Cuts Made"))
+```
+
+It looks like a simple 2 component solution performs best - modularity actually decreases as we increase the number of cuts. Let’s see how it looks on the network.
+
+```{r}
+plot(g5, 
+     vertex.label = NA, 
+     vertex.size=2, 
+     edge.arrow.size = .1, 
+     mark.groups = edge_betweenness_clustering(g5, 2))
+```
+It works!
+
+This was a fun exercise, but my code is quite slow and not that intelligent. Thankfully, there are a plethora of group detection algorithms in igraph written to be much faster than mine. The full list is: edge.betweenness.community (i.e. what I tried to make above), fastgreedy.community, label.propagation.community, leading.eigenvector.community, multilevel.community, optimal.community, spinglass.community, and walktrap.community.
+
+This webpage has a summary of their pros and cons for an older version of igraph: http://bommaritollc.com/2012/06/summary-community-detection-algorithms-igraph-0-6/
+
+The main takeaway is that you should tailor your algorithm choice to your network. Certain algorithms are designed for directed or undirected graphs, and work better with small or large graphs.
+
+Each algorithm as its own igraph function. These functions produce lists with information about the algorithm results. Element 1 holds a vector that details which group each node is in, which I will refer to as the membership vector. Element 6 holds the modularity of the network given the group detection algorithm.
+
+For undirected graphs, you can use the optimal or multilevel algorithms.
+
+```{r}
+communityMulti <- multilevel.community(g5)
+```
+
+For directed graphs, edge betweenness is generally your best bet, though the walktrap algorithm performs well too.
+```{r}
+communityWalk <- walktrap.community(g2)
+communityEB <- edge.betweenness.community(g2)
+communityInfo <- infomap.community(g2)
+```
+
+We can use the mark.groups argument in plot to see the groups.
+
+```{r}
+plot(g5, vertex.size = 3, vertex.label = NA, mark.groups = communityMulti)
+```
+Alternatively, we can just color the nodes by group membership. In this case, we can just use the membership function
+```{r}
+V(g5)$color <- membership(communityMulti)
+plot(g5, vertex.size = 3, vertex.label = NA)
+```
+This becomes less feasible as the number of groups increases! It is better in that case to use one of the coloring functions I sent along via Canvas a few weeks back.
+
+###  Modularity
+Modularity takes a given group structure and calculates how separated the different groups are from each other. It therefore operationalizes our notion of groups above by calculating the proportion of ties that are within groups as opposed to between them. Networks with high modularity have dense connections between the nodes within modules but sparse connections between nodes in different modules.
+
+We can think of modularity as both a measure of how effective a given grouping algorithm is - i.e. higher modularity means the alogrithm is identifying distinct, sociall separate groups. But it can also be thought of as a measure of the saliency of groups to the network in general. The higher modularity the more that groups structure the network. Modularity measures the extent to which a network can be divided into distinct modules or groups.
+
+Getting a network’s modularity in igraph is easy! We can either access the modularity score directly
+
+```{r}
+communityMulti <- multilevel.community(g5)
+communityMulti$modularity
+```
+
+Or use the modularity() function.
+
+```{r}
+modularity(communityMulti) # We can use the modularity() function on a group detection output.
+```
+
+## 2.11. Homophily and Exponential Random Graphs (ERGM)
+
+### Homophily
+In this tutorial, we cover how to A) calculate homophily on a network and B) fit exponential random graphs to networks. First, we will need one of the Add Health data sets that we have been playing around with in previous tutorials. The code below downloads the data from Moreno’s website and converts it into an igraph object. We went over this in the Transitivy tutorial, so here, I just paste the code.
+
+Through this tutorial, we will rely on igraph to analyze the comm59 Add Health network that we made use of last class.
+
+```{r}
+# read in the edge list from our github
+el <- read.table("https://raw.githubusercontent.com/mahoffman/stanford_networks/main/data/comm59.dat.txt", header = T)
+# Read in attributes from our github
+attributes <- read.table("https://raw.githubusercontent.com/mahoffman/stanford_networks/main/data/comm59_att.dat.txt", header = T)
+# add an ID column
+attributes$ID <- 1:nrow(attributes)
+
+# Indexing data so that you only put in certain columns
+el_no_weight <- el[,1:2] # We will ignore the ranking variable for now.
+el_no_weight <- as.matrix(el_no_weight) # igraph requires a matrix
+
+# convert ids to characters so they are preserved as names
+el_no_weight[,1] <- as.character(el_no_weight[,1])
+el_no_weight[,2] <- as.character(el_no_weight[,2])
+
+# Graph the network
+library(igraph)
+net59 <- graph.edgelist(el_no_weight, directed = T)
+
+# Finally, add attributes  
+# First link vertex names to their place in the attribute dataset
+linked_ids <- match(V(net59)$name, attributes$ID)
+
+# Then we can use that to assign a variable to each user in the network
+V(net59)$race <- attributes$race[linked_ids]
+V(net59)$sex <- attributes$sex[linked_ids]
+V(net59)$grade <- attributes$grade[linked_ids]
+V(net59)$school <- attributes$school[linked_ids]
+
+net59 <- igraph::delete.vertices(net59, which(is.na(V(net59)$sex) | V(net59)$sex == 0))
+net59 <- igraph::delete.vertices(net59, which(is.na(V(net59)$race) | V(net59)$race == 0))
+net59 <- igraph::delete.vertices(net59, which(is.na(V(net59)$grade) | V(net59)$grade == 0))
+```
+
+Great, now that we have the network, we can evaluate homophily. We can either use igraph’s built in function…
+
+```{r}
+assortativity(net59, types1 = as.numeric(V(net59)$sex))
+```
+Or do it ourselves. If you’ll remember from class on Tuesday, assortativity on variable is calculated by simply correlating the values of an attribute for every ego-alter pair in the network. We just grab the edgelist, match in ego and alter’s values for the variable of interest, and correlate with cor.test.
+```{r}
+df <- data.frame(get.edgelist(net59), stringsAsFactors = F)
+df$sex1 <- as.numeric(attributes$sex[match(df$X1, attributes$ID)])
+df$sex2 <- as.numeric(attributes$sex[match(df$X2, attributes$ID)])
+cor.test(df$sex1, df$sex2)
+```
+Race, however, is probably better conceptualized as a categorical variable. Assortativity_nominal can be used to evaluate assortativity for categorical variables. It requires a numeric vector, denoting the different categories, which starts at 1, so we add one to the race variable, which starts at 0.
+
+```{r}
+assortativity_nominal(net59, types = as.numeric(V(net59)$race) + 1)
+```
+
+### ERGMs
+Now imagine, like Wimmer and Lewis, we wanted to calculate homophily for race, but wanted to control for other network factors, such as transitivity, which might lead to a higher degree of same race friendships, but which don’t actually signal an in-group preference. Just like them, we can use exponential random graphs, which model networks as a function of network statistics. Specifically, ERGMs imagine the observed network to be just one instantiation of a set of possible networks with similar features, that is, as the outcome of a stochastic process, which is unknown and must therefore be inferred.
+
+The package that allows one to fit ergm models is part of the statnet (statistical networks) suite of packages. Much like tidyverse, which you might be familiar with, statnet includes a number of complementary packages for the statistical analysis of networks. Let’s install statnet and load it into R.
+
+```{r}
+# install.packages("statnet")
+library(statnet)
+```
+Great, now we can use statnet’s ergm() function to fit our first ERGM. The only problem? Our network is an igraph object rather than a statnet one. There is some good news though. People have built a package for converting igraph objects to statnet and vise versa - intergraph. Let’s install that and load it in too.
+```{r}
+#install.packages("intergraph")
+library(intergraph)
+```
+
+Now that we have intergraph installed and in our R environment, we can use the asNetwork function to convert it to a statnet object. I will also subset the data here, because ERGMs take forever to run and the network is somewhat large (~1000 nodes).
+
+```{r}
+set.seed(1234)
+sampled_students <- sample(V(net59)$name, 350, replace = F)
+net59_for_ergm <- igraph::delete.vertices(net59, !V(net59)$name %in% sampled_students)
+
+statnet59 <- asNetwork(net59_for_ergm)
+statnet59
+```
+
+It even ported over our node attributes! You can plot it to see if it looks the same as it did in igraph.
+
+```{r}
+plot(statnet59, 
+     vertex.col = "tomato", 
+     vertex.cex = 1)
+```
+With our data ready for analysis using statnet, let’s build our first ERGM. There are a number of potential ERG model terms that we could use in fitting our model. You can view a full list by looking at the documentation for:
+
+```{r}
+?ergm.terms
+```
+
+That said, it is common to build up from some basic terms first. The McFarland-Moody paper we read in class is a useful reference point as is the Wimmer-Lewis paper. Generally, the first term that people use is the edges term. It is a statistic which counts how many edges there are in the network.
+
+```{r}
+random_graph <- ergm(statnet59 ~ edges, control = control.ergm(seed = 1234))
+```
+
+How do we interpret this coefficient? Coefficients in ERGMs represent the change in the (log-odds) likelihood of a tie for a unit change in a predictor. We can use a simple formula for converting log-odds to probability to understand them better.
+
+```{r}
+inv.logit <- function(logit){
+  odds <- exp(logit)
+  prob <- odds / (1 + odds)
+  return(prob)
+}
+
+theta <- coef(random_graph)
+inv.logit(theta)
+```
+So the probability of an edge being in the graph is roughly 0.02. The probability of an edge being drawn should in theory be the same as density - let’s check.
+
+```{r}
+network.density(statnet59)
+```
+Nice.
+
+To put it all back into the theoretical underpinnings of ERGMs, we have modeled a stochastic generating process, and the only constraint we have put on the stochastic process is the probability with which edges are drawn, which was set equal to the network density of our observed graph.
+
+We can more closely examine the model fit using the summary() function, just like lm() or glm() in base R.
+
+```{r}
+summary(random_graph)
+```
+We can also simulate graphs using our ERGM fit. We did something similar to this when we simulated random graphs and set the probability of an edge being drawn to be equal to our network’s density. We just didn’t know it at the time!
+```{r}
+set.seed(1234)
+hundred_simulations <- simulate(random_graph, 
+                  coef = theta,
+                  nsim = 100,
+                  control = control.simulate.ergm(MCMC.burnin = 1000,
+                                             MCMC.interval = 1000))
+```
+
+Let’s examine the first nine simulations.
+
+```{r}
+par(mfrow = c(3, 3))
+sapply(hundred_simulations[1:9], plot, vertex.cex = 1, vertex.col = "tomato")
+```
+
+We can compare the number of edges our observed graph has to the average of the simulated networks.
+```{r}
+net_densities <- unlist(lapply(hundred_simulations, network.density))
+
+hist(net_densities, xlab = "Density", main = "", col = "lightgray")
+abline(v = network.density(statnet59), col = "red", lwd = 3, lty = 2)
+abline(v = mean(net_densities), col = "blue", lwd = 3, lty = 1)
+```
+Pretty close!
+
+Another way to evaluate our model is to use the built-in goodness of fit measures. Essentially, we will evaluate whether our network has similar structural features as the simulated graphs. ergm has a built-in function - gof() - which calculates the statistics for us. We just have to tell it how many simulations we want to use in the comparison set - the larger the number, the more accurate representation of the model.
+
+```{r}
+gof_stats <- gof(random_graph)
+
+par(mfrow = c(2, 3))
+plot(gof_stats, main = '')
+```
+
+On one measure, edgewise shared partners, our model looks okay. On the others, especially in and out degree, it looks awful. How to we improve our fit? By adding more terms to the model!
+
+First, let’s build a model with only dyad-independent terms. Just like with the random graph, we are essentially fitting a logistic regression.
+
+nodematch is the homophily term in ergm. We can specify the attribute we want to examine as well as the diff argument, which allows for differential levels of homophily for different groups.
+
+```{r}
+model1 <- ergm(statnet59 ~ edges + 
+                 nodematch("race") + 
+                 nodematch("sex") + 
+                 nodematch("grade"))
+```
+```{r}
+summary(model1)
+```
+Every variable is significant! Grade and race have especially large coefficients and all three are positive.
+
+Let’s try it with diff set to T. We will limit our examination to only grade/race/sex categories represented by a large number of vertices in our network. You can examine this using the table function
+
+
+```{r}
+table(V(net59_for_ergm)$race) # 1 = white, 2 = black, 3 = hispanic, 4 = asian, and 5 = mixed/other
+table(V(net59_for_ergm)$sex) # 1 = male, 2 = female
+table(V(net59_for_ergm)$grade)
+
+model2 <- ergm(statnet59 ~ edges + 
+                 nodematch("race", diff = T, levels = c("1", "2", "5")) + 
+                 nodematch("sex", diff = T, levels = c("1", "2")) + 
+                 nodematch("grade", diff = T, levels = as.character(c(7:12))))
+```
+```{r}
+summary(model2)
+```
+Interesting! Now let’s add some dyad-dependent terms. These can be a bit finnicky, especially transitivity ones.
+
+mutual is the term for reciprocity.
+
+```{r}
+model3 <- ergm(statnet59 ~ edges + 
+                 nodematch("race") + 
+                 nodematch("sex") + 
+                 nodematch("grade") + 
+                 mutual)
+```
+
+```{r}
+summary(model3)
+```
+Now let’s add a term for triadic closure. There are a few terms for triads - one of them, triangles, tends to lead to degeneracy. The gwesp term behaves better, though convergence is far from guaranteed.
+
+It may be a good time to use the bathroom. This will take a while…
+
+
+model4 <- ergm(statnet59 ~ edges + 
+                 nodematch("race") + 
+                 nodematch("sex") + 
+                 nodematch("grade") + 
+                 mutual + 
+                 gwesp(0.25, fixed = T),
+               control=control.ergm(MCMLE.maxit= 40))
+               
+* you can change a number of other things about the MCMC algorithm - from its burn-in to its step and sample size
+
+* here we just up the maximum iterations we wait to see if it has converged
+
+summary(model4)
+
+Definitely an improvement over the random graph.
+
+Lab: Run ergm on a graph of interest to you and include balance (reciprocity and triadic closure) and homophily terms. Interpret the results. Simulate a graph from this model and compare it to your original graph.
+
+# 3. ADA version
+
+## 3.1. Data preparation
+This section shows how to create a network visualization with the network and the GGally packages. The network we will generate shows how often characters in William Shakespeare’s Romeo and Juliet occurred in the same scene. The issue we want to investigate here relates to networks of personas in Shakespeare’s Romeo and Juliet and we thus load this famous work of fiction.
+
+## 3.2. Creating a matrix
+Now that we have loaded the data, we need to split the data into scenes. Scenes during which personas leave or enter will have to be split too so that we arrive at a table that contains the personas that are present during a sub-scene.
+
+```{r}
+# load data
+rom <- read.delim("https://slcladal.github.io/data/romeo_tidy.txt", sep = "\t")
+rom
+```
+
+We now transform that table into a co-occurrence matrix.
+
+```{r}
+rome <- crossprod(table(rom[1:2]))
+diag(rome) <- 0
+romeo <- as.data.frame(rome)
+romeo
+```
+The data shows how often a character has appeared with each other character in the play - only Friar Lawrence and Friar John were excluded because they only appear in one scene where they talk to each other.
+
+
+
+## 3.3. Network Visualization
+There are various different ways to visualize a network structure. We will focus on two packages for network visualization here and exemplify how you can visualize networks in R.
+
+### Tidy Networks
+A great way to generate network graphs is to combine functions from the igraph, the ggraph, and the tidygraph packages. The advantages are that the syntax of for creating the networks aligns with the tidyverse style of writing R and that the graphs can be modified very easily.
+
+To generate network graphs in this way, we define the nodes and we can also add information about the odes that we can use later on (such as frequency information).
+
+```{r}
+library(stringr)
+library(igraph)
+library(dplyr)
+va <- romeo %>%
+  dplyr::mutate(Persona = rownames(.),
+                Occurrences = rowSums(.)) %>%
+  dplyr::select(Persona, Occurrences) %>%
+  dplyr::filter(!str_detect(Persona, "SCENE"))
+va
+```
+Now, we define the edges, i.e., the connections between nodes and, again, we can add information in separate variables that we can use later on.
+
+```{r}
+ed <- romeo %>%
+  dplyr::mutate(from = rownames(.)) %>%
+  tidyr::gather(to, Frequency, BALTHASAR:TYBALT) %>%
+  dplyr::mutate(Frequency = ifelse(Frequency == 0, NA, Frequency))
+ed
+```
+
+Now that we have generated tables for the edges and the nodes, we can generate a graph object.
+
+```{r}
+ig <- igraph::graph_from_data_frame(d=ed, vertices=va, directed = FALSE)
+ig
+```
+We will also add labels to the nodes as follows:
+```{r}
+tg <- tidygraph::as_tbl_graph(ig) %>% 
+  tidygraph::activate(nodes) %>% 
+  dplyr::mutate(label=name)
+```
+
+
+When we now plot our network, it looks as shown below.
+
+```{r warning=FALSE}
+library(ggraph)
+# set seed
+set.seed(12345)
+# edge size shows frequency of co-occurrence
+tg %>%
+   ggraph(layout = "fr") +
+   geom_edge_arc(colour= "gray50",
+                 lineend = "round",
+                 strength = .1,
+                 alpha = .1) +
+   geom_node_text(aes(label = name), 
+                  repel = TRUE, 
+                  point.padding = unit(0.2, "lines"), 
+                  colour="gray10") +
+  theme_graph(background = "white") +
+  guides(edge_width = FALSE,
+         edge_alpha = FALSE)
+```
+
+Now, we use the number of occurrences to define vertex size (or node size): the more often a character appears, the bigger it will appear in the graph.
+
+```{r}
+v.size <- V(tg)$Occurrences
+# inspect
+v.size
+```
+When we include this into our network, it looks as shown below.
+
+```{r}
+# set seed
+set.seed(12345)
+# edge size shows frequency of co-occurrence
+tg %>%
+   ggraph(layout = "fr") +
+   geom_edge_arc(colour= "gray50",
+                  lineend = "round",
+                 strength = .1) +
+   geom_node_point(size=log(v.size)*2) +
+   geom_node_text(aes(label = name), 
+                  repel = TRUE, 
+                  point.padding = unit(0.2, "lines"), 
+                  size=sqrt(v.size), 
+                  colour="gray10") +
+  scale_edge_width(range = c(0, 2.5)) +
+  scale_edge_alpha(range = c(0, .3)) +
+  theme_graph(background = "white") +
+  guides(edge_width = FALSE,
+         edge_alpha = FALSE)
+```
+
+Next, we modify the edges by using frequency information to define weights: the more often two characters appear in the same scene, the bigger the edge.
+
+```{r}
+E(tg)$weight <- E(tg)$Frequency
+# inspect weights
+head(E(tg)$weight, 10)
+```
+
+When we include this into our network, it looks as shown below.
+```{r warning=FALSE}
+# set seed
+set.seed(12345)
+# edge size shows frequency of co-occurrence
+tg %>%
+   ggraph(layout = "fr") +
+   geom_edge_arc(colour= "gray50",
+                  lineend = "round",
+                 strength = .1,
+                 aes(edge_width = weight,
+                     alpha = weight)) +
+   geom_node_point(size=log(v.size)*2) +
+   geom_node_text(aes(label = name), 
+                  repel = TRUE, 
+                  point.padding = unit(0.2, "lines"), 
+                  size=sqrt(v.size), 
+                  colour="gray10") +
+  scale_edge_width(range = c(0, 2.5)) +
+  scale_edge_alpha(range = c(0, .3)) +
+  theme_graph(background = "white") +
+  theme(legend.position = "top") +
+  guides(edge_width = FALSE,
+         edge_alpha = FALSE)
+```
+
+Finally, we define colors so that characters belonging to the same family have the same color.
+
+```{r}
+# define colors (by family)
+mon <- c("ABRAM", "BALTHASAR", "BENVOLIO", "LADY MONTAGUE", "MONTAGUE", "ROMEO")
+cap <- c("CAPULET", "CAPULET’S COUSIN", "FIRST SERVANT", "GREGORY", "JULIET", "LADY CAPULET", "NURSE", "PETER", "SAMPSON", "TYBALT")
+oth <- c("APOTHECARY", "CHORUS", "FIRST CITIZEN", "FIRST MUSICIAN", "FIRST WATCH", "FRIAR JOHN" , "FRIAR LAWRENCE", "MERCUTIO", "PAGE", "PARIS", "PRINCE", "SECOND MUSICIAN", "SECOND SERVANT", "SECOND WATCH", "SERVANT", "THIRD MUSICIAN")
+# create color vectors
+Family <- dplyr::case_when(sapply(tg, "[")$nodes$name %in% mon ~ "MONTAGUE",
+                           sapply(tg, "[")$nodes$name %in% cap ~ "CAPULET",
+                           TRUE ~ "Other")
+# inspect colors
+Family
+```
+
+set.seed(12345)
+tg %>%
+   ggraph(layout = "fr") +
+   geom_edge_arc(colour= "gray50",
+                  lineend = "round",
+                 strength = .1,
+                 aes(edge_width = weight,
+                     alpha = weight)) +
+   geom_node_point(size=log(v.size)*2, 
+                   aes(color=Family)) +
+   geom_node_text(aes(label = name), 
+                  repel = TRUE, 
+                  point.padding = unit(0.2, "lines"), 
+                  size=sqrt(v.size), 
+                  colour="gray10") +
+  scale_edge_width(range = c(0, 2.5)) +
+  scale_edge_alpha(range = c(0, .3)) +
+  theme_graph(background = "white") +
+  theme(legend.position = "top") +
+  guides(edge_width = FALSE,
+         edge_alpha = FALSE)
+
+## 3.4. Network Statistics
+In addition to visualizing networks, we will analyze the network and extract certain statistics about the network that tell us about structural properties of networks. In the present case, we will extract
+
+To extract the statistics, we use the edge object generated above (called ed) and remove all rows that contain missing values (NA) and then repeat each combination as often as it occurred based on the value in the Frequency column.
+
+```{r}
+dg <- ed %>%
+  tidyr::drop_na()
+dg <- dg[rep(seq_along(dg$Frequency), dg$Frequency), 1:2]
+rownames(dg) <- NULL
+dg
+```
+We now generate an edge list from the dg object and then extract the degree centrality of all edges in the dg object by using the degree function from the igraph package. The degree centrality reflects the counts of how many edges each node has. The most central node is the one with with the highest value of ties.
+
+```{r}
+dgg <- graph.edgelist(as.matrix(dg), directed = T)
+# extract degree centrality
+igraph::degree(dgg) 
+```
+
+To extract the most central node, we can use the max() function to extract the name of the node with the most edges.
+
+```{r}
+names(igraph::degree(dgg))[which(igraph::degree(dgg) == max(igraph::degree(dgg)))]
+```
+We now extract the betweenness centrality of all edges in the dg object by using the betweenness function from the igraph package. Betweenness centrality reflects how connected nodes are. More precisely, it provides a measure of how important noes are for information flow between nodes in a network. The node with the highest betweenness centrality creates the shortest paths in the network. For any two nodes we can find the shortest path, i.e. the path with the lowest number of steps that are necessary to get from the node A to node B. If a node C facilitates the shortest path between A and B, then it means C is important to the efficient flow of information between A and B.
+
+Thus, betweenness effectively counts how many shortest paths each node is on. The higher a node’s betweenness, the more important they are for the efficient flow of goods in a network.
+
+```{r}
+igraph::betweenness(dgg)
+```
+To extract the most central node, we can use the max() function to extract the name of the node with the most edges.
+
+```{r}
+names(igraph::betweenness(dgg))[which(igraph::betweenness(dgg) == max(igraph::betweenness(dgg)))]
+```
+
+In addition, we extract the closeness statistic of all edges in the dg object by using the closeness function from the igraph package. Closeness centrality refers to the shortest paths between nodes. The distance between two nodes represents the length of the shortest path between them. The closeness of a node is the average distance from that node to all other nodes.
+
+```{r}
+igraph::closeness(dgg)
+```
+To extract the node with the highest closeness, we can use the max() function to extract the name of the node with the most edges.
+
+```{r}
+names(igraph::closeness(dgg))[which(igraph::closeness(dgg) == max(igraph::closeness(dgg)))]
+```
+We have reached the end of this tutorial and you now know how to create and modify networks in R and how you can highlight aspects of your data.
+
+
+# 4.Replication
+
+* Cranmer, Skyler J., Philip Leifeld, Scott McClurg, and Meredith Rolfe (2016): Navigating the Range of Statistical Tools for Inferential Network Analysis. American Journal of Political Science.
+
+* Note: The original dataset was collected by Karin Ingold and is publicly available for download at http://dx.doi.org/10.7910/DVN/27427.
+
+* The following analyses were carried out using R version 3.2.4 (2016-03-16).
+
+## 4.1. LOAD PACKAGES AND SET RANDOM SEED
+
+```{r}
+library("network")      # needed to handle network data; version 1.13.0
+library("sna")          # descriptive network analysis; version 2.3.2
+# library("ergm")         # ERGM estimation; tested with version 3.5.1
+# library("latentnet")    # latent space models; tested with version 2.7.1
+library("texreg")       # generate regression tables; tested with version 1.36.4
+# library("btergm")       # extensions of ERGMs; tested with version 1.7.0
+library("lme4")         # Random effects logit model; tested with version 1.1.10
+library("sandwich")     # Huber-White correction; tested with version 2.3.4
+library("lmtest")       # Robust significance test; tested with version 0.9.34
+library("gee")          # GEE models; tested with version 4.13.19
+library("latticeExtra") # nicer output of MCMC diagnostics; version 0.6.26
+
+seed <- 12345
+set.seed(seed)
+```
+
+## 4.2. LOAD DATA
+```{r}
+
+# policy forum affiliation data
+# 1 = affiliation; 0 = no affiliation
+# committee names are in the column labels; actors in the row labels
+forum <- as.matrix(read.table(file = "climate0205-committee.csv", 
+    header = TRUE, row.names = 1, sep = ";"))
+
+# influence reputation data
+# square matrix with influence attribution
+# 1 = influential; 0 = not influential
+# cells contain the ratings of row actors about column actors
+infrep <- as.matrix(read.table(file = "climate0205-rep.csv", 
+    header = TRUE, row.names = 1, sep = ";"))
+
+# collaboration; directed network
+collab <- as.matrix(read.table(file = "climate0205-collab.csv", 
+    header = TRUE, row.names = 1, sep = ";"))
+
+# type of organization; vector with five character types
+types <- as.character(read.table(file="climate0205-type.csv", 
+    header = TRUE, row.names = 1, sep = ";")[, 2])
+
+# alliance-opposition perception; -1 = row actor perceives column actor as 
+# an opponent; 1 = row actor perceives column actor as an ally; 0 = neutral
+allopp <- as.matrix(read.table(file = "climate0205-allop.csv", 
+    header = TRUE, row.names = 1, sep = ";"))
+
+# preference dissimilarity; Manhattan distance over four important policy issues
+prefdist <- as.matrix(read.table(file = "climate0205-prefdist.csv", 
+    header = TRUE, row.names = 1, sep = ";"))
+
+```
+
+To illustrate the strengths and weaknesses of the three
+models, we apply each to a simple, cross-sectional policy
+network on relations between 34 political actors in the
+Swiss climate change mitigation network (Ingold 2008).
+We reanalyze her data set with a logit model and the
+network methods described above. Our results show that
+all three network models outperform the standard logit
+estimates onmultiple criteria,with theERGMperforming
+best overall.
+
+The directed outcome network reflects collaboration
+among four government agencies, five political parties,
+six scientific/research organizations, 11 organized interest
+groups (private-sector and business associations),
+and seven environmental nongovernmental organizations
+(NGOs; Ingold 2008; Ingold and Fischer 2014).
+
+
+## 4.3. PREPARE DATA
+
+```{r}
+
+# apply some changes to the data to make them network-compatible
+forum <- forum %*% t(forum)  # compute one-mode projection over forums
+diag(forum) <- 0  # the diagonal has no meaning
+
+nw.collab <- network(collab)  # create network object
+set.vertex.attribute(nw.collab, "orgtype", types)  # store attributes in network
+set.vertex.attribute(nw.collab, "betweenness", betweenness(nw.collab))
+set.vertex.attribute(nw.collab, "influence", degree(infrep, cmode = "indegree"))
+
+# endogenous terms as edge covariates
+collab.t <- t(collab)  # reciprocal relation
+infrep.t <- t(infrep)
+
+# matrix: row actor = environmental group, column = business, or vice-versa
+priv.ngo <- matrix(0, nrow = nrow(collab), ncol = ncol(collab))
+for (i in 1:nrow(priv.ngo)) {
+  for (j in 1:ncol(priv.ngo)) {
+    if ((types[i] == "private" && types[j] == "ngo") || 
+        (types[i] == "ngo" && types[j] == "private")) {
+      priv.ngo[i, j] <- 1
+      priv.ngo[j, i] <- 1
+    }
+  }
+}
+
+# create nodal covariate matrices
+gov.ifactor <- matrix(rep(1 * (types == "gov"), length(types)), byrow = TRUE, 
+    nrow = length(types))
+ngo.ofactor <- matrix(rep(1 * (types == "ngo"), length(types)), byrow = FALSE, 
+    nrow = length(types))
+
+type.nodematch <- matrix(0, nrow = nrow(collab), ncol = ncol(collab))
+for (i in 1:nrow(type.nodematch)) {
+  for (j in 1:ncol(type.nodematch)) {
+    if (types[i] == types[j]) {
+      type.nodematch[i, j] <- 1
+    }
+  }
+}
+
+influence <- degree(infrep, cmode = "indegree")
+influence.icov <- matrix(rep(influence, length(influence)), byrow = TRUE, 
+    nrow = length(influence))
+influence.absdiff <- matrix(0, nrow = nrow(collab), ncol = ncol(collab))
+for (i in 1:nrow(influence.absdiff)) {
+  for (j in 1:ncol(influence.absdiff)) {
+    influence.absdiff[i, j] <- abs(influence[i] - influence[j])
+  }
+}
+```
+
+0. Dependent Variable
+
+(1) collab (dummy): collaboration 1, or 0
+
+1. Conflicting Policy Preferences. We expect little
+collaboration between conflictual interests, such
+as business and environmental groups.
+
+(a) Business vs. NGO (expected effect: negative).
+Whether the tie sender is anNGOand
+the potential receiver is a business association
+or vice versa.
+
+(b) Preference dissimilarity (expected
+effect: negative). A dissimilarity matrix between
+the 34 actors over four important policy
+issues using Manhattan distances.
+
+(c) Opposition/alliance (expected effect:
+positive). Ameasure of perceived policy similarity.
+2. Transaction Costs. The literature suggests other
+mechanisms for collaboration between actors,
+such as transaction costs associated with acquiring
+contacts (Leifeld and Schneider 2012).
+
+(a) Joint forum participation (expected
+effect: positive). Indicator for
+whether i and j are members of the same
+policy forums.
+
+3. Political Influence. Actor i tends to collaborate
+with j if i deems j influential in the policy process
+because this is instrumental for achieving
+policy objectives (Ingold and Leifeld 2016).
+
+(a) Influence attribution (expected effect:
+positive). Indicator for whether an organization
+considers another organization
+“particularly influential.”
+
+(b) Alter’s influence indegree (expected
+effect: positive). Each cell Xij
+contains the indegree of column actor j in
+the influence attribution network.
+
+(c) Influence absolute diff. (expected
+effect: negative). Absolute difference between
+the influence indegree of i and the
+influence indegree of j .
+
+(d) Alter = Government actor (expected
+effect: positive). Tests whether state actors
+are popular collaboration targets.
+
+4. Functional Actor Role Requirements.
+
+(a) Ego = Environmental NGO (expected
+effect: positive). Indicator for whether ego
+is an environmental NGO.
+
+(b) Same actor type (expected effect: positive).
+Indicator for whether i and j are the
+same type of organization, and thus likely
+functionally interdependent.
+
+
+
+## 4.4. LOGISTIC REGRESSION
+
+```{r}
+
+
+# logistic regression without any correction; row random effects
+rows <- rep(1:nrow(collab), ncol(collab))
+cols <- c(sapply(1:ncol(collab), function(x) rep(x, nrow(collab))))
+
+logit.data <- data.frame(collab = c(collab), prefdist = c(prefdist), 
+    ngo.ofactor = c(ngo.ofactor), gov.ifactor = c(gov.ifactor), 
+    forum = c(forum), infrep = c(infrep), collab.t = c(collab.t), 
+    type.nodematch = c(type.nodematch), priv.ngo = c(priv.ngo), 
+    influence.icov = c(influence.icov), influence.absdiff = 
+    c(influence.absdiff), allopp = c(allopp), rows = rows, cols = cols)
+
+model.logit <- glm(collab ~ priv.ngo + allopp + prefdist + forum + infrep + 
+    influence.icov + influence.absdiff + gov.ifactor + ngo.ofactor + 
+    type.nodematch + collab.t, data = logit.data, family = "binomial")
+summary(model.logit)
+# goodness of fit for the logit model
+covariates <- list(priv.ngo, allopp, prefdist, forum, infrep, 
+    influence.icov, influence.absdiff, gov.ifactor, ngo.ofactor, 
+    type.nodematch, collab.t)
+
+gof.logit <- lgof(collab, covariates, coef(model.logit), statistics = c(dsp, 
+    esp, geodesic, ideg, odeg, istar))
+# pdf("gof-logit.pdf", width = 9, height = 6)
+plot(gof.logit)
+# dev.off()
+```
+
+
+

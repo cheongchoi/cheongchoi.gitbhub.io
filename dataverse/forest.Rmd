@@ -1,0 +1,648 @@
+---
+title: "Main"
+author: "Cheon Geun Choi"
+date: "2024-04-18"
+mainfont: NanumGothic
+monofont: NanumGothic
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+  pdf_document:
+    latex_engine: xelatex
+editor_options:
+  chunk_output_type: inline
+---
+
+# 1. 준비작업
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+rm(list=ls())
+gc()
+# globals
+options(scipen=999)
+```
+
+```{r}
+
+# packages
+
+library(magrittr)
+library(tidyverse)
+library(broom)
+library(hrbrthemes)
+library(plm)
+library(estimatr)
+library(sandwich)
+library(lmtest)
+library(AER)
+library(lfe)
+library(huxtable)
+library(margins)
+library(readstata13)
+library(texreg)
+library(reshape2)
+library(readxl)
+library(xtable)
+library(interplot)
+
+library(coefplot)
+library(randomForest)
+library(interactions)
+library(glmnet) # lasso and ridge regression for prediction
+library(LARF)   # contains function for generating polynomials and interactions
+library(hdm)    # lasso-based double selection for causal inference
+library(caret)  # contains command for confusion matrix
+library(randomForest) # random forests
+library(rpart)        # decision trees
+library(rpart.plot)   # library for plotting decision trees
+library(grf)
+library(SuperLearner)
+library(truncnorm)
+library(dplyr)
+# ggplot theme
+theme_set(theme_bw())
+
+# define paths
+datpath <- "./df/"
+outpath <- "./df/"
+```
+
+```{r}
+
+# set seed
+RNGkind(sample.kind = "Rounding")
+# ensures consistent seeds across R versions
+set.seed(1115)
+
+# LOAD  ----
+```
+
+```{r}
+# LOAD  ----
+
+df <- readRDS(paste0(datpath, "data_main.rds"))
+
+```
+
+
+# Fig 1. 기대 사회경제적 지위 & 실제 사회경제적 지위
+```{r}
+
+# ANALYSIS ----
+
+# FIGURE 1 ----
+
+# get slope
+
+summary(lm(df$ses~df$ses_pred2100))
+alpha <- lm(df$ses~df$ses_pred2100)$coef[[1]]
+beta <- lm(df$ses~df$ses_pred2100)$coef[[2]]
+
+# simulation
+
+# fisei values df, mean=1.65 (42), sd=0.91 (17)
+sim_mean <- mean(df$fedu, na.rm=T)
+sim_sd <- sd(df$fedu, na.rm=T)
+father_edu <-   rtruncnorm(n=200, a=0, b=100, mean=sim_mean, sd=sim_sd)
+
+# zero mobility
+alpha_2 <- alpha+20
+alpha_3 <- alpha
+
+beta_2 <- beta
+beta_3 <- beta
+
+sigma <- 5
+
+eps <- rnorm(father_edu,0,sigma)
+
+higher_mobility <- alpha_2 + beta_2*father_edu + eps*((father_edu/100)+1)
+
+lower_mobility <- alpha_3 + beta_3*father_edu + eps*((father_edu/100)+1)
+
+
+sim <- data.frame(cbind(father_edu, higher_mobility, lower_mobility))
+
+sim$isd_down1 <- ifelse(sim$higher_mobility<sim$father_edu,"negative", "positive")
+sim$isd_down2 <- ifelse(sim$lower_mobility<sim$father_edu, "negative", "positive")
+
+table(sim$isd_down1)
+table(sim$isd_down2)
+
+sim$isd_down2 <- factor(sim$isd_down2, levels = c("positive", "negative"))
+summary(sim)
+
+ggplot(sim, aes(x=father_edu)) + 
+  #geom_point(aes(y=higher_mobility), shape=2) +
+  geom_point(aes(y=lower_mobility, group=factor(isd_down2), shape=factor(isd_down2)), alpha=0.6) +
+  geom_smooth(aes(y=higher_mobility), method='lm', se=FALSE, color="black", linetype="dashed", linewidth=0.5) +
+  geom_smooth(aes(y=lower_mobility), method='lm', se=FALSE, color="black", linetype="dashed", linewidth=0.5) +
+  scale_shape_manual("Status Discordance", values=c(17, 2))+
+  scale_x_continuous(name="Intergenerational Reference Point (Father)", limits = c(0, 5), breaks=seq(0, 5, 1)) +
+  scale_y_continuous(name="Realized Status (Child)", limits = c(-15, 40), breaks=seq(-15, 40, 2)) +
+  geom_abline(intercept = 0, color="grey") +
+  # label
+  # geom_segment(aes(x=5, xend=5, y=57, yend=43),
+  #                arrow=arrow(length=unit(2, "mm")), color="black", linewidth=0.4) +
+
+  annotate("text", x=5, y=69, label= "declining \nabsolute \nmobility", color="black") # +
+ # legend
+ # theme(legend.position=c(0.95,0.05),
+ #       legend.justification = c(1,0),
+#        legend.backgroun = element_blank())
+
+ggsave(paste0(outpath, "Figure1.pdf"), height=6, width=6)
+
+```
+
+# DESCRIPTIVES ----
+
+```{r}
+# Distribution by Group ----
+summary(df$isd)
+ggplot(subset(df, !is.na(isd)), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(fill="black", alpha=0.1) + ylim(0,1) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave(paste0(outpath, "Figure2a_dens_all.eps"), device=cairo_ps)
+
+ggplot(subset(df, !is.na(isd)), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(fill="black", alpha=0.1) + ylim(0,1) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave(paste0(outpath, "Figure2a_dens_all2.eps"), device=cairo_ps, height=6, width=8)
+```
+
+
+```{r}
+table(df$male)
+ggplot(subset(df, !is.na(isd)), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(male), group=factor(male)), alpha=0.3) + ylim(0,1) +
+  scale_fill_discrete(name="Gender",
+                         labels=c("Female", "Male")) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = c(.2, .85))
+ggsave(paste0(outpath, "Figure2b_dens_sex.eps"), device=cairo_ps)
+
+df %>%
+  group_by(male) %>%
+  dplyr::summarise(mean=mean(isd, na.rm = T), sd=sd(isd, na.rm = T))
+```
+
+
+```{r}
+ggplot(subset(df, !is.na(isd)), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(male), group=factor(male)), alpha=0.3) + ylim(0,1) +
+  annotate(geom="curve", x=1, xend=0.2, y=0.90, yend=0.78, curvature=0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=1.2, y=0.90, label="Male", hjust="left", linewidth=6) +
+  annotate(geom="curve", x=-1, xend=-0.2, y=0.90, yend=0.78, curvature=-0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=-1.2 , y=0.90, label="Female", hjust="right", linewidth=6) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  scale_fill_manual(values=c("#000000", "#E69F00")) +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position="none")
+ggsave(paste0(outpath, "Figure2b_dens_sex2.eps"), device=cairo_ps, height=6, width=8)
+```
+
+
+```{r}
+library(dplyr)  #edu 중졸이하=1, 고졸=2, 전문대졸=3, 대졸=4, 석사이상=5
+df$hs <- ifelse(df$edu>2, 1, 0)
+ggplot(subset(df, !is.na(isd) &!is.na(hs)), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), color="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(hs), group=factor(hs)), alpha=0.3) + ylim(0,1) +
+    scale_fill_discrete(name="Education",
+                         labels=c("no college", "college")) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = c(.2, .88))
+ggsave(paste0(outpath, "Figure2c_dens_col.eps"), device=cairo_ps)
+```
+
+```{r}
+df %>%
+  group_by(hs) %>%
+  dplyr::summarise(mean=mean(isd, na.rm = T), sd=sd(isd, na.rm = T))
+```
+
+```{r}
+ggplot(subset(df, !is.na(isd)&!is.na(hs)), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(hs), group=factor(hs)), alpha=0.3) + ylim(0,1) +
+  annotate(geom="curve", x=1, xend=0.2, y=0.90, yend=0.78, curvature=0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=1.2, y=0.90, label="No College", hjust="left", linewidth=6) +
+  annotate(geom="curve", x=-1, xend=-0.2, y=0.90, yend=0.78, curvature=-0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=-1.2 , y=0.90, label="College", hjust="right", linewidth=6) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  scale_fill_manual(values=c("#000000", "#E69F00")) +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position="none")
+ggsave(paste0(outpath, "Figure2c_dens_col2.eps"), device=cairo_ps, height=6, width=8)
+```
+
+## 성장지
+```{r}
+ggplot(subset(df, !is.na(isd) & !is.na(youthloc)), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(youthloc), group=factor(youthloc)), alpha=0.3) + ylim(0,1) +
+  scale_fill_discrete(name="Youth Location", 
+                      labels=c("Local Province", "Metropolitan")) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = c(.25, .85))
+ggsave(paste0(outpath, "Figure2d_dens_youthloc.eps"), device=cairo_ps)
+
+
+ggplot(subset(df, !is.na(isd) & !is.na(youthloc)), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(youthloc), group=factor(youthloc)), alpha=0.3) + ylim(0,1) +
+  annotate(geom="curve", x=1, xend=0.2, y=0.90, yend=0.78, curvature=0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=1.2, y=0.90,  label="Metropolitan", hjust="left", linewidth=6) +
+  annotate(geom="curve", x=-1, xend=-0.2, y=0.90, yend=0.78, curvature=-0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=-1.2 , y=0.90, label="Local Province", hjust="right", linewidth=6) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  scale_fill_manual(values=c("#E69F00", "#000000")) +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+ggsave(paste0(outpath, "Figure2d_dens_youthloc2.eps"), device=cairo_ps, height=6, width=8)
+```
+```{r}
+table(df$fedu) #중졸이하=1, 고졸=2, 전문대졸=3, 대졸=4, 석사이상=5
+df$fedudummy <- ifelse(df$fedu>2, 1,0)
+```
+```{r}
+ggplot(subset(df, !is.na(isd) &!is.na(fedudummy)), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), color="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(fedudummy), group=factor(fedudummy)), alpha=0.3) + ylim(0,1) +
+    scale_fill_discrete(name="Father High Eduction",
+                         labels=c("No High Eduction", "High Education")) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = c(.2, .85))
+ggsave(paste0(outpath, "Figure2e_dens_eastwest1989.eps"), device=cairo_ps)
+```
+```{r}
+
+```
+
+
+```{r}
+ggplot(subset(df, !is.na(isd) &!is.na(fedudummy)), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), color="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(fedudummy), group=factor(fedudummy)), alpha=0.3) + ylim(0,1) +
+  annotate(geom="curve", x=0.6, xend=0.2, y=0.75, yend=0.64, curvature=0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=0.8, y=0.75,  label="Father High Education", hjust="left", linewidth=6) +
+  annotate(geom="curve", x=-1, xend=-0.2, y=0.90, yend=0.78, curvature=-0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=-1.2 , y=0.90, label="No High Education", hjust="right", linewidth=6) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  scale_fill_manual(values=c("#E69F00", "#000000")) +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+ggsave(paste0(outpath, "Figure2e_dens_eastwest19892.eps"), device=cairo_ps, height=6, width=8)
+```
+
+
+```{r}
+table(df$medu) #중졸이하=1, 고졸=2, 전문대졸=3, 대졸=4, 석사이상=5
+df$medudummy <- ifelse(df$medu>2, 1,0)
+
+ggplot(subset(df, !is.na(isd) & !is.na(medudummy) & medudummy!=2), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(medudummy), group=factor(medudummy)), alpha=0.3) + ylim(0,1) +
+  scale_fill_discrete(name="Mother High Education", 
+                      labels=c("no", "yes")) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = c(.25, .85))
+ggsave(paste0(outpath, "Figure2f_dens_medudummy.eps"), device=cairo_ps)
+
+
+ggplot(subset(df, !is.na(isd) & !is.na(medudummy) & medudummy!=2), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(medudummy), group=factor(medudummy)), alpha=0.3) + ylim(0,1) +
+  annotate(geom="curve", x=1, xend=0.2, y=0.90, yend=0.78, curvature=0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=1.2, y=0.90, label="No High Education", hjust="left", linewidth=6) +
+  annotate(geom="curve", x=-1, xend=-0.2, y=0.90, yend=0.78, curvature=-0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=-1.2 , y=0.90, label="Mother High Education", hjust="right", linewidth=6) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  scale_fill_manual(values=c("#000000", "#E69F00")) +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+ggsave(paste0(outpath, "Figure2f_dens_medudummy2.eps"), device=cairo_ps, height=6, width=8)
+
+
+
+```
+
+```{r}
+summary(df$age2) #45 이상 1, 이하=0
+df$age2dummy <- ifelse(df$age2>45, 1,0)
+
+ggplot(subset(df, !is.na(isd) & !is.na(age2dummy) & age2dummy!=2), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(age2dummy), group=factor(age2dummy)), alpha=0.3) + ylim(0,1) +
+  scale_fill_discrete(name="Senior(46~60yr)", 
+                      labels=c("no", "yes")) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = c(.25, .85))
+ggsave(paste0(outpath, "Figure2f_dens_age2dummy.eps"), device=cairo_ps)
+
+
+ggplot(subset(df, !is.na(isd) & !is.na(age2dummy) & age2dummy!=2), aes(x=isd)) + 
+  geom_histogram(aes(y=..density..), colour="black", fill="white", binwidth=0.1) + 
+  geom_density(aes(fill=factor(age2dummy), group=factor(age2dummy)), alpha=0.3) + ylim(0,1) +
+  annotate(geom="curve", x=1, xend=0.2, y=0.90, yend=0.78, curvature=0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=1.2, y=0.90, label="Junior(30~45yr)", hjust="left", linewidth=6) +
+  annotate(geom="curve", x=-1, xend=-0.2, y=0.90, yend=0.78, curvature=-0.2, arrow=arrow(length=unit(2, "mm"))) +
+  annotate(geom="text", x=-1.2 , y=0.90, label="Senior(46~60yr)", hjust="right", linewidth=6) +
+  xlab(expression(atop("Intergenerational Status Discordance", paste("Positive" %<-% "         " %->% "Negative")))) + ylab("Density") + 
+  scale_fill_manual(values=c("#000000", "#E69F00")) +
+  theme_bw() +
+  theme(text = element_text(size=20), legend.position = "none")
+ggsave(paste0(outpath, "Figure2f_dens_age2dummy2.eps"), device=cairo_ps, height=6, width=8)
+
+
+
+```
+
+# Bi-variate plots ----
+```{r}
+saveRDS(df, file = "df/df.rds")
+df<- readRDS(file = "df/df.rds")
+df<- left_join(df, readRDS("df/jobsatis.rds"), by = "pid")
+```
+
+
+```{r}
+# 직무만족 (bundestagswahl 2017)
+summary(df$isd100)
+summary(df$jobsatis)
+
+plot(x=df$isd100, y=df$jobsatis, 
+     xlim=c(0,100),
+     ylim=c(1,5),
+     xlab="Intergenerational Status Discordance (Percentiles)", ylab="Job Satisfaction") + abline(lm(df$jobsatis~df$isd100),lty=1, col="red")
+
+summary(df$isd100)
+summary(df$orgcomm)
+plot(x=df$isd100, y=df$orgcomm, 
+          xlim=c(0,100),
+     ylim=c(1,5),
+     xlab="Intergenerational Status Discordance (Percentiles)", ylab="Organicational Commitment") + abline(lm(df$orgcomm~df$isd100),lty=1, col="red")
+
+```
+
+
+
+# Final Out
+```{r}
+
+ggplot(data=df, aes(x=isd100, y=jobsatis)) + geom_point() + stat_summary(fun.data=mean_cl_normal) + 
+  geom_smooth(method='lm', se=F) + stat_smooth(method="lm",fill=NA,colour="black",linetype=2,geom="ribbon") +
+  ylab("Job Satisfaction") + xlab("Intergenerational Status Discordance") + ylim(1, 5) +   
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave(paste0(outpath, "Figure3a_isd100_novote_lm.eps"), height=6, width=6)
+
+ggplot(data=df, aes(x=isd100, y=orgcomm)) + geom_point() + stat_summary(fun.data=mean_cl_normal) + 
+  geom_smooth(method='lm', se=F) + stat_smooth(method="lm",fill=NA,colour="black",linetype=2,geom="ribbon") +
+  ylab("Organizational Commitment") + xlab("Intergenerational Status Discordance") + ylim(1, 5) +  
+  theme_bw() +
+  theme(text = element_text(size=20))
+ggsave(paste0(outpath, "Figure3b_isd100_vanti_lm.eps"), height=6, width=6)
+
+```
+
+# REGRESSION MODELS ----
+```{r}
+library(haven)
+library(dplyr)
+df<- readRDS(file = "df/df.rds")
+df<- left_join(df, readRDS("df/jobsatis.rds"), by = "pid")
+
+p25 <- read_dta(file = "df/klips25p.dta", encoding='utf-8', col_select=c("pid", "p250121", "p250401", "p250314", "p255501", "p256101", "p251701")) # 개인자료
+p25 <- p25 %>% rename(loc=p250121, empst = p250314, compst = p250401, marital = p255501, health = p256101, iinc = p251701)
+p25$health <-ifelse(p25$health ==1, 5,
+                      ifelse(p25$health==2, 4,
+                            ifelse(p25$health ==3, 3,
+                                   ifelse(p25$health==4, 2,
+                                          ifelse(p25$health ==5, 1, NA)))))
+df <-left_join(df, p25, by="pid")
+
+# Job Satisfaction ----
+
+##empst: (종사상지위) 1)상용, 2)임시, 3)일용, 4)고용주/자영업자, 5)무급가족종사자
+## compst: p250401 기업형태 (1) 민간회사 또는 개인 사업체  (2) 외국인 회사  (3) 정부투자기관, 정부출연기관,공사합동기업  (4) 법인단체  (5) 정부기관  (6) 나는 특정회사나 사업체에 소속되어 있지 않다  (7) 시민단체, 종교단체  (8) 기타 
+## publc: 1: 정부투자기관, 정부출연기관,공사합동기업,정부기관 
+## p250121 loc: 거주지역  (1) 서울특별시    (2) 부산광역시   (3) 대구광역시   (4) 대전광역시   (5) 인천광역시   (16)제주도 (19) 세종 
+## marital p__5501	 (1) 미혼이다 	 (2) 기혼이며 배우자가 있다 	 (3) 별거하였다 	 (4) 이혼하였다 	 (5) 배우자가 먼저 사망하였다 
+## health = p256101, #건강상태	 (1) 아주 건강하다  .. (5) 건강이 아주 안 좋다
+
+# 가구소득 
+h25 <- read_stata(file = "df/klips25h.dta", encoding='utf-8') # 가구자료
+h25[h25==(-1)] <- NA
+##항목별 소득총계
+hhid25<- h25[, "hhid25"]
+inc_e <- h25[ , "h252102"] #근로소득
+m <- dplyr::select(h25,h252112,h252113,h252115,h252116)
+inc_m <- rowSums(m, na.rm = TRUE) #금융소득
+p <- dplyr::select(h25,h252122:h252126)
+inc_p <- rowSums(p, na.rm = TRUE) #부동산소득
+i <- dplyr::select(h25,h252134,h252136,h252138,h252140,h252142)
+inc_i <- rowSums(i, na.rm = TRUE) #이전소득
+t <- dplyr::select(h25,h252152,h252153,h252155,h252157:h252160,h252162,h254002,h254004)
+inc_t <- rowSums(t, na.rm = TRUE) #사회보험소득
+o <- dplyr::select(h25,h252183:h252191)
+inc_o <- rowSums(o, na.rm = TRUE) #기타소득
+inc_table <- data.frame(hhid25, inc_e,inc_m,inc_p,inc_i,inc_t,inc_o)
+##가구 총소득
+inc_table$inc <- rowSums(inc_table[,1:6], na.rm = TRUE)
+inc_table$inc <- ifelse(inc_table$inc==0, NA, inc_table$inc)
+
+dfmain<- left_join(df, inc_table, by="hhid25")
+dfmain$public <-ifelse(dfmain$compst == 3 | dfmain$compst==5, 1, 0)
+saveRDS(dfmain, file = "df/dfmain.rds")
+dfmain<- readRDS(file = "df/dfmain.rds")
+```
+
+
+```{r}
+covars2 <- paste(c("isd2", "age2", "male", "factor(loc)", "factor(empst)", "factor(marital)", "health", "log(inc)", "factor(edu)",  "factor(compst)"),  collapse="+")
+
+t1_v2_jobsatis <- lm(paste("jobsatis~", covars2, sep=""), data=dfmain)
+t1_v2_orgcomm <- lm(paste("orgcomm~", covars2, sep=""), data=dfmain)
+
+screenreg(list(t1_v2_jobsatis, t1_v2_orgcomm), digits=3, custom.model.names=c("Job Satis", "Org. Commit"))
+
+```
+
+```{r}
+covars3 <- paste(c("isd2", "factor(public)", "age2", "male", "factor(loc)", "factor(empst)", "factor(marital)", "health", "log(inc)", "factor(edu)", "factor(compst)"),  collapse="+")
+
+t1_v2_jobsatis1 <- lm(paste("jobsatis~", covars3, sep=""), data=dfmain)
+t1_v2_orgcomm1 <- lm(paste("orgcomm~", covars3, sep=""), data=dfmain)
+
+screenreg(list(t1_v2_jobsatis1, t1_v2_orgcomm1), digits=3, custom.model.names=c("Job Satis", "Org. Commit"))
+
+```
+
+
+```{r}
+covars4 <- paste(c("isd2", "factor(public)","hs", "age2", "male", "factor(loc)", "factor(empst)", "factor(marital)", "health", "log(inc)",  "factor(compst)"),  collapse="+")
+
+t1_v2_jobsatis2 <- lm(paste("jobsatis~", covars4, sep=""), data=dfmain)
+t1_v2_orgcomm2 <- lm(paste("orgcomm~", covars4, sep=""), data=dfmain)
+
+screenreg(list(t1_v2_jobsatis2, t1_v2_orgcomm2), digits=3, custom.model.names=c("Job Satis", "Org. Commit"))
+```
+
+
+
+
+```{r}
+library(sjPlot)
+library(sjmisc)
+```
+
+```{r}
+library(gmodels)
+summary(dfmain$age2)
+dfmainsub <- dfmain %>%
+        filter(!is.na(isd2) & !is.na(age2) & !is.na(jobsatis) & !is.na(empst) & !is.na(compst))
+table(dfmainsub$male)
+CrossTable(dfmainsub$male)
+
+dfmainsub <- dfmainsub %>%
+          mutate(agecat = ifelse(age2<30, "20s",
+                                 ifelse(age2<40, "30s",
+                                        ifelse(age2<50, "40s", "50s"))))
+table(dfmainsub$age2)
+CrossTable(dfmainsub$edu)
+CrossTable(dfmainsub$compst)
+mean(dfmainsub$jobsatis)
+
+sd(dfmainsub$isd2)
+mean(dfmainsub$inc)
+sd(dfmainsub$inc)
+
+cor.test(dfmainsub$isd2, dfmainsub$jobsatis)
+cor.test(dfmainsub$isd2, dfmainsub$health)
+cor.test(dfmainsub$isd2, dfmainsub$inc)
+cor.test(dfmainsub$jobsatis, dfmainsub$inc)
+cor.test(dfmainsub$jobsatis, dfmainsub$health)
+cor.test(dfmainsub$health, dfmainsub$inc)
+
+```
+
+```{r}
+jobsatis1 <- lm(jobsatis~isd2 + age2 +  male + factor(loc) + factor(empst) + factor(marital) + health + log(inc)+ factor(compst), data=dfmain)
+jobsatis2 <- lm(jobsatis~isd2 + age2 + hs +  male + factor(loc) + factor(empst) + factor(marital) + health + log(inc)+ factor(compst), data=dfmain)
+jobsatis3 <- lm(jobsatis~isd2 *hs + age2 + male + factor(loc) + factor(empst) + factor(marital) + health + log(inc)+ factor(compst), data=dfmain)
+
+cor.test(dfmain$iinc, dfmain$jobsatis)
+```
+```{r}
+summary(jobsatis1, digits = 3)
+```
+
+
+
+```{r}
+options(digits = 5)
+anova(jobsatis1, jobsatis3)
+```
+
+```{r}
+library(stargazer)
+stargazer(jobsatis1,type="text")
+```
+
+
+```{r}
+library(stargazer)
+stargazer(jobsatis2,type="text")
+```
+
+```{r}
+library(stargazer)
+stargazer(jobsatis3,type="text")
+```
+```{r}
+screenreg(list(jobsatis1, jobsatis2, jobsatis3), digits=3)
+```
+
+
+```{r}
+summary(dfmain$jobsatis)
+
+
+library(ggplot2)
+
+plot_model(jobsatis3, type = "pred", terms = c("isd2", "hs"),  title = "직무만족(상호작용 효과)",    axis.labels = "ISD", legend.title = "고등교육") + ylim(3.0, 4.2)
+
+summary(df$jobsatis)
+
+```
+
+```{r}
+dfmain30<- dfmain %>%
+            filter(age2<40)
+dfmain40<- dfmain %>%
+            filter(age2<50 & age2>39)
+dfmain50<- dfmain %>%
+            filter(age2>49)            
+
+jobsatis30 <- lm(jobsatis~isd2 *hs + age2 + male + factor(loc) + factor(empst) + factor(marital) + health + log(inc)+ factor(compst), data=dfmain30)
+
+jobsatis40 <- lm(jobsatis~isd2 *hs + age2 + male + factor(loc) + factor(empst) + factor(marital) + health + log(inc)+ factor(compst), data=dfmain40)
+
+jobsatis50 <- lm(jobsatis~isd2 *hs + age2 + male + factor(loc) + factor(empst) + factor(marital) + health + log(inc)+ factor(compst), data=dfmain50)
+```
+
+
+```{r}
+screenreg(list(jobsatis30, jobsatis40, jobsatis50), digits=2)
+```
+
+
+```{r}
+library(sjPlot)
+library(sjmisc)
+
+jobsatis1 <- lm(jobsatis~isd2 + hs + factor(public) +age2 + male + factor(loc) + factor(empst) + factor(marital) + health + log(inc)+ factor(compst), data=dfmain)
+jobsatis2 <- lm(jobsatis~isd2*hs + factor(public) +age2 + male + factor(loc) + factor(empst) + factor(marital) + health + log(inc)+ factor(compst), data=dfmain)
+
+orgcomm1 <- lm(orgcomm~isd2 + hs + factor(public) +age2 + male + factor(loc) + factor(empst) + factor(marital) + health + log(inc)+ factor(compst), data=dfmain)
+orgcomm2 <- lm(orgcomm~isd2*hs + factor(public) +age2 + male + factor(loc) + factor(empst) + factor(marital) + health + log(inc)+ factor(compst), data=dfmain)
+
+screenreg(list(jobsatis1, jobsatis2, orgcomm1, orgcomm2), digits=3)
+summary(dfmain$jobsatis)
+
+
+plot_model(jobsatis2, type = "pred", terms = c("isd2", "hs"),  title = "Job Satisfaction(Interaction Effects)",    axis.labels = "ISD", legend.title = "High Education")
+
+```
+
+
+```{r}
+
+
+plot_model(orgcomm2, type = "pred", terms = c("isd2", "hs"),  title = "Organiational Commitment(Interaction Effects)",    axis.labels = "ISD", legend.title = "High Education")
+
+
+```
+
+
+

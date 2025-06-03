@@ -1,0 +1,132 @@
+---
+title: "qca4"
+author: "Cheon Geun Choi"
+date: "2024-02-15"
+output: html_document
+---
+```{r}
+##R Code for Payments and Penalties for Democracy: Gendered Electoral Financing in Action Worldwide
+# install.packages("QCA", dependencies = TRUE)
+library(QCA)
+library(readxl)
+```
+
+
+```{r}
+GEFQCA <- read_excel("Copy of Payments and Penalties Data.xlsx")
+GEFQCA <- as.data.frame(GEFQCA)
+##Calibration not done in R (done by researchers prior to analysis)
+##Except where indicated data analysis coding taken from Dusa (2019), QCA with R: A Comprehensive Resource
+
+##Necessity QCA tests Configurational
+GEFQCANR<-superSubset(GEFQCA, outcome = "Success", neg.out = FALSE, conditions = c("Quota", "PartyDirected", "RegulatoryApproachSD", "PublicFunding", "CandidateSelectionSystemCentralized", "WMPsPrior", "PresenceofPR"), relation="necessity", incl.cut=0.9, cov.cut=0.52, use.tilde=FALSE, use.letters = FALSE)
+GEFQCANR
+```
+
+
+```{r}
+##Necessity 0 Outcome
+GEFQCANR0<-superSubset(GEFQCA, outcome = "Success", neg.out = TRUE, conditions = c("Quota", "PartyDirected", "RegulatoryApproachSD", "PublicFunding", "CandidateSelectionSystemCentralized", "WMPsPrior", "PresenceofPR"), relation="necessity", incl.cut=0.9, cov.cut=0.52, use.tilde=FALSE, use.letters = FALSE)
+GEFQCANR0
+```
+
+
+```{r}
+##Sufficiency Tests
+GEFQCASR<-superSubset(GEFQCA, outcome = "Success", neg.out = FALSE, conditions = c("Quota", "PartyDirected", "RegulatoryApproachSD", "PublicFunding", "CandidateSelectionSystemCentralized", "WMPsPrior", "PresenceofPR"), relation="sufficiency", use.tilde=FALSE, use.letters = FALSE)
+GEFQCASR
+```
+
+
+```{r}
+##Sufficiency 0 outcome
+GEFQCASR0<-superSubset(GEFQCA, outcome = "Success", neg.out = TRUE, conditions = c("Quota", "PartyDirected", "RegulatoryApproachSD", "PublicFunding", "CandidateSelectionSystemCentralized", "WMPsPrior", "PresenceofPR"), relation="sufficiency", use.tilde=FALSE, use.letters = FALSE)
+GEFQCASR0
+##Returned no cases that met incl or coverage
+```
+
+
+```{r}
+library(dplyr)
+df <- GEFQCA %>% select(c("Success", "Quota", "RegulatoryApproachSD", "PresenceofPR", "PublicFunding", "CandidateSelectionSystemCentralized", "WMPsPrior"))
+##Truthtable with 6 conditions 
+GEFQCATT<- truthTable(df, outcome = "Success", 
+                      conditions = c("Quota", "RegulatoryApproachSD", "PresenceofPR", "PublicFunding", "CandidateSelectionSystemCentralized", "WMPsPrior"),
+                      complete=FALSE, show.cases=TRUE, sort.by = c("incl,n"))
+GEFQCATT
+```
+
+
+```{r}
+##Boolean Minimization with fewest PIs on [1] Outcome  ##All minimal sums of solutions produced same results
+GEFQCACS1<-minimize(GEFQCATT, explain = "1", details = TRUE, show.cases = TRUE)
+GEFQCACS1
+```
+
+
+```{r}
+##Boolean Minimization with fewest PIs on [0] Outcome  ##All minimal sums of solutions produced same results
+GEFQCACS0<-minimize(GEFQCATT, explain = "0", details = TRUE, show.cases = TRUE)
+GEFQCACS0
+```
+
+
+```{r}
+##[1] Outcome with logical remainders
+##Create complete truth table for analysis
+GEFQCATTFull<- truthTable(df, outcome = "Success", 
+                          conditions = c("Quota", "RegulatoryApproachSD", "PresenceofPR", "PublicFunding", "CandidateSelectionSystemCentralized", "WMPsPrior"),
+                          complete=TRUE, show.cases=TRUE, sort.by = c("incl,n"))
+GEFQCATTFull
+```
+
+
+```{r}
+##Parsimonious solution of [1] outcome
+GEFQCA1PS<-minimize(GEFQCATTFull, include = "?", rowdom = TRUE, details=TRUE, neg.out=FALSE)
+GEFQCA1PS
+library(venn)
+venn(GEFQCA1PS)
+```
+
+
+```{r}
+##PI chart
+GEFQCA1PS[["PIchart"]]
+```
+
+
+```{r}
+##Simplifying Assumptions
+GEFQCA1PS[["SA"]]
+```
+
+
+```{r}
+##Parsimonious solution of [0] outcome no row dominance
+##0 TruthTable
+GEFQCAtt0<-truthTable(df, "~Success", 
+                      conditions = c("Quota", "RegulatoryApproachSD", "PresenceofPR", "PublicFunding", "CandidateSelectionSystemCentralized", "WMPsPrior"),
+                      complete=FALSE, show.cases=TRUE, sort.by = c("incl,n"))
+GEFQCAtt0
+```
+
+
+```{r}
+GEFQCA0PS<-minimize(GEFQCAtt0, include = "?", rowdom = TRUE, details = TRUE)
+GEFQCA0PS
+```
+
+
+```{r}
+##PI Chart
+GEFQCA0PS[["PIchart"]]
+```
+
+
+```{r}
+##Simplifying Assumptions
+GEFQCA0PS[["SA"]]
+
+```
+

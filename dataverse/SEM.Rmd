@@ -1,0 +1,1007 @@
+---
+title: "SEM"
+author: "Cheon Geun Choi"
+date: "2025-01-18"
+mainfont: NanumGothic
+output:
+  pdf_document:
+    latex_engine: xelatex
+  word_document: default
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+
+# 1. STRUCTURAL EQUATION MODELING (SEM) IN R
+
+## 1.1. 설치
+
+* install.packages("lavaan", dependencies=TRUE)
+Once you’ve installed the package, you can load lavaan via the following
+
+```{r}
+library(lavaan)
+```
+
+
+## 1.1. 소개 
+Structural equation modeling is a linear model framework that models both simultaneous regression equations with latent variables.  Models such as linear regression, multivariate regression, path analysis, confirmatory factor analysis, and structural regression can be thought of as special cases of SEM. The following relationships are possible in SEM:
+
+* observed to observed variables ($\gamma$, e.g., regression)
+* latent to observed variables ($\lambda$, e.g., confirmatory factor analysis)
+* latent to latent variables ($\gamma, \beta$,  e.g., structural regression)
+
+SEM uniquely encompasses both measurement and structural models. The measurement model relates observed to latent variables and the structural model relates latent to latent variables. Various software programs currently handle SEM models including Mplus, EQS, SAS PROC CALIS, Stata’s sem and more recently, R’s lavaan. The benefit of lavaan is that it is open source, freely available, and is relatively easy to use.
+
+This seminar will introduce the most common models that fall under the SEM framework including
+
+* simple regression
+* multiple regression
+* multivariate regression
+* path analysis
+* confirmatory factor analysis
+* structural regression
+
+The purpose of the seminar will be to introduce within each model its
+
+* matrix formulation
+* path diagram
+* lavaan syntax
+* interpretation of parameters and output
+
+By the end of this training, you should be able to understand enough of these concepts to correctly identify the model, recognize each parameter in the matrix formulation and interpret the output of each model in lavaan. Finally, for those of you who are interested, the technical underpinnings of all these models are based on classic LISREL (linear structural relations) notation in honor of Karl Joreskög (1969, 1973). Although critics of LISREL note its complexity and sharp learning curve for the causal user, all modern implementations of SEM are derivations of LISREL and serve either to expand its capabilities or whittle down its complexity. Thus understanding LISREL is foundational to understanding more modern SEM frameworks and programs.
+
+## 1.3. Motivating example
+Suppose you are a researcher studying the effects of student background on academic achievement. The lab recently finished collecting and uploading the dataset (worland5.csv) of N=500 students each with 9 observed variables: Motivation, Harmony, Stability, Negative Parental Psychology, SES, Verbal IQ, Reading, Arithmetic and Spelling. The principal investigator hypothesizes three latent constructs Adjustment, Risk, Achievement measured with its corresponding to the following codebook mapping:
+
+$Adjustment$
+* motiv Motivation
+* harm Harmony
+* stabi Stability
+
+$Risk$
+* ppsych (Negative) Parental Psychology
+* ses SES
+* verbal Verbal IQ
+
+$Achievement$
+
+* read Reading
+* arith Arithmetic
+* spell Spelling
+
+Due to budget constraints, your lab uses the freely available R statistical programming language, and lavaan as the structural equation modeling (SEM) package of choice. You can download the file from the link here worland5.csv or load the file directly into R with the following command
+
+```{r}
+dat <- read.csv("https://stats.idre.ucla.edu/wp-content/uploads/2021/02/worland5.csv")
+head(dat)
+```
+
+The most essential component of a structural equation model is covariance or the statistical relationship between items. The true population covariance, denoted $\Sigma$, is called the variance-covariance matrix. Since we do not know $\Sigma$ we can estimate it with our sample, and call it $\hat{\Sigma}=S$, or the sample variance-covariance matrix. The function cov specifies that we want to obtain the covariance matrix $S$ from the data.
+
+```{r}
+cov(dat)
+```
+
+Both $\Sigma$ and $S$ share similar properties. The diagonals constitute the variances of the item and the off-diagonals the covariances. Notice that the variance of all variables in our study happens to be 100 (down the diagonals). Looking at the relationships between variables (the off-diagonal elements), recall that a positive covariance means that as one item increases the other increases, a negative covariance means that as one item increases the other item decreases. The covariance of motiv and ppsych is -25 which means that as negative parental psychology increases student motivation decreases. Notice that the covariances in the upper right triangle are the same as those in the lower right triangle, meaning the covariance of Motivation and Harmony is the same as the covariance of Harmony and Motivation. This property is known as symmetry and will be important later on. The variance-covariance matrix $\Sigma$  should not be confused with $\Sigma(\theta)$ which is the model-implied covariance matrix. The purpose of SEM is to reproduce the variance-covariance matrix using parameters 
+ we hypothesize will account for either the measurement or structural relations between variables. If the model perfectly reproduces the variance-covariance matrix then $\Sigma =\Sigma(\theta)$
+.
+
+*True or False.* Running the cov command in R allows us to obtain the population variance-covariance matrix $\Sigma$
+
+Answer: False, since we are running our analysis on a sample we are obtaining $S$.
+
+*True or False.* $S=\hat\Sigma$ means that it is an estimate of the population variance-covariance matrix.
+
+Answer: True, the hat symbol indicates an estimate
+
+*True or False.* $\Sigma(\theta)$ is the variance-covariance matrix reproduced from model parameters
+
+Answer: True, $\theta$ denotes model parameters. The goal of SEM is to reproduce $\Sigma$ with $\Sigma(\theta)$.
+
+## 1.4. Definitions
+* observed variable: a variable that exists in the data, a.k.a item or manifest variable
+* latent variable: a variable that is constructed and does not exist in the data
+* exogenous variable: an independent variable either observed (x) or latent ($\xi$) that explains an endogenous variable
+* endogenous variable: a dependent variable, either observed (y) or latent ($\eta$) that has a causal path leading to it
+* measurement model: a model that links observed variables with latent variables
+* indicator: an observed variable in a measurement model (can be exogenous or endogenous)
+* factor: a latent variable defined by its indicators (can be exogenous or endogenous)
+* loading: a path between an indicator and a factor
+* structural model: a model that specifies causal relationships among exogenous variables to endogenous variables (can be observed or latent)
+* regression path: a path between exogenous and endogenous variables (can be observed or latent)
+
+There is subtlety to the definition of an indicator. Although 
+ x variables are typically seen as independent variables in a linear regression, the x or y label of an indicator in a measurement model depends on the factor it belongs to. An indicator is an x-side indicator if it depends on an exogenous factor and a y-side indicator if it depends on an endogenous factor.
+
+## 1.5. The path diagram
+To facilitate understanding of the matrix equations (which can be a bit intimidating), a path diagram will be presented with every matrix formulation as it is a symbolic one-to-one visualization. Before we present the actual path diagram, the table below defines the symbols we will be using. Circles represent latent variables, squares represent observed indicators, triangles represent intercepts or means, one-way arrows represent paths and two-way arrows represent either variances or covariances.
+
+![Fig11](fig11.png)
+
+For example in the figure below, the diagram on the left depicts the regression of a factor on an item (contained in a measurement model) and the diagram on the right depicts the variance of the factor (a two-way arrow pointing to a the factor itself).
+
+![Fig12](fig12.png)
+
+The following is a path diagram of all the types of variables and relationships you will see in this seminar.
+
+![Fig13](fig13.png)
+
+
+## 1.6. Quick reference of lavaan syntax
+Before running our first regression analysis, let us introduce some of the most frequently used syntax in lavaan
+
+* ~ predict, used for regression of observed outcome to observed predictors (e.g., y ~ x)
+* =~ indicator, used for latent variable to observed indicator in factor analysis measurement models (e.g., f =~ q + r + s)
+* ~~ covariance (e.g., x ~~ x)
+* ~1 intercept or mean (e.g., x ~ 1 estimates the mean of variable x)
+* 1* fixes parameter or loading to one (e.g., f =~ 1*q)
+* NA* frees parameter or loading (useful to override default marker method, (e.g., f =~ NA*q)
+* a* labels the parameter ‘a’, used for model constraints (e.g., f =~ a*q)
+
+# 2. Regression and Path Analysis
+
+## 2.1. Simple regression (Model 1A)
+Simple regression models the relationship of an observed exogenous variable on a single observed endogenous variable. For a single subject, the simple linear regression equation is most commonly defined as:
+
+$$y_1 = b_0 + b_1 x_1 + \epsilon_1$$
+where b0 is the intercept and b1 is the coefficient and x is an observed predictor and $\epsilon$ is the residual. Karl Joreskög, the originator of LISREL (linear structural relations), developed a special notation for the exact same model for a single observation:
+$$y_1 = \alpha + \gamma x_1 + \zeta_1$$
+
+Definitions
+* $x_1$ single exogenous variable
+* $y_1$ single endogenous variable
+* $b_0, \alpha_1$ intercept of y1, “alpha”
+* $b_1, \gamma_1$ regression coefficient, “gamma”
+* $\epsilon_1, \zeta_1$ residual of y1, “epsilon” and “zeta”
+* $\phi$, variance or covariance of the exogenous variable, “phi”
+* $\psi$ residual variance or covariance of the endogenous variable, “psi”
+
+To see the matrix visually, we can use a path diagram (Model 1A):
+
+![Fig14](fig14.png)
+In R, the most basic way to run a linear regression is to use the lm() function which is available in base R.
+
+```{r}
+#simple regression using lm()
+m1a <- lm(read ~ motiv, data=dat)
+(fit1a <-summary(m1a))
+```
+
+The predicted mean of read is 0 for a student with motiv=0 and for a one unit increase in motivation, the reading score improves 0.530 points. Make special note of the residual standard error which is 8.488. The square of that $8.488^2 = 72.04$ is the residual variance, which we will see later in lavaan(). We can run the equivalent code in lavaan. The syntax is very similar to lm() in that read ~ motiv specifies the predictor motiv on the outcome read. However, by default the intercept is not included in the output but is implied. If we want to add an intercept, we need to include read ~ 1 + motiv. Optionally, you can request the variance of motiv using motiv ~~ motiv. If this syntax is not provided, the parameter is still estimated but just implied.
+
+The intercept of .read (-0.000) and the regression coefficient of read ~ motiv (0.530) matches the output of lm() with small rounding errors. Note that the . in front of the parameter denotes an endogenous variable under Intercepts and a residual variance if under Variances or Covariances. The intercept for motiv (0.000) does not have a . nor does its variance (99.800) signifying that it is an exogenous mean and variance. The exogenous mean and variance $\phi_{11}$ should closely match the univariate mean (0) and variance (100) as shown below:
+
+```{r}
+mean(dat$motiv)
+
+var(dat$motiv)
+```
+
+## 2.2. Maximum likelihood vs. least squares
+The estimates of the regression coefficients are equivalent between the two methods but the variance differs. For least squares, the estimate of the residual variance is:
+$$\hat{\sigma}^2_{LS} = \frac{\sum_{i=1}^{N} \hat{\zeta_i}^2}{N-k}$$ 
+ 
+where N is the sample size, and k is the number of predictors + 1 (intercept) For maximum likelihood the estimate of the residual variance is:
+$$\hat{\sigma}^2_{ML} = \frac{\sum_{i=1}^{N} \hat{\zeta_i}^2}{N}$$ 
+
+To convert from the least squares residual variance to maximum likelihood:
+
+$$\hat{\sigma}^2_{ML} = \left(\frac{N-k}{n}\right) \hat{\sigma}^2_{LS}$$ 
+
+* Going back to the lm() output we see that
+
+    + Residual standard error: 8.488 on 498 degrees of freedom
+
+So the least square variance is 72.046. To convert the variance to maximum likelihood, since k=2 we have 498/500(72.046) = 71.76.
+
+```{r}
+498/500*(fit1a$sigma)**2
+```
+This matches the lavaan output.
+
+## 2.3.Multiple regression (Model 2)
+Simple regression is limited to just a single exogenous variable. In practice, a researcher may be interested in how a group of exogenous variable predict an outcome. Suppose we still have one endogenous outcome but two exogenous predictors; this is known as multiple regression (not to be confused with multivariate regression). Matrix form allows us to concisely represent the equation for all observations
+
+$$y_1 = \alpha_1 + \mathbf{x \gamma} + \zeta_1$$
+
+Definitions
+* $y_1$ single endogenous variable
+* $\alpha_1$ intercept for y1
+* $X$ vector (1Xq) of exogenous variables
+* $\gamma$ vector (qX1) of regression coefficients where q is the total number of exogenous variables
+* $\zeta_1$ residual of $y_1$, pronounced “zeta”.
+* $\phi$, variance or covariance of the exogenous variable
+* $\psi$ residual variance or covariance of the endogenous variable
+
+Assumptions
+* $E(\zeta)=0$ the mean of the residuals is zero
+* $\zeta$ is uncorrelated with X
+
+Suppose we have two exogenous variables x1, x2 predicting a single endogenous variable y1. The path diagram for this multiple regression (Model 2) is:
+
+![Fig15](fig15.png)
+
+Specifying a multiple regression in lavaan is as easy as adding another predictor. Suppose the researcher is interested in how Negative Parental Psychology ppsych and Motivation motiv to predict student readings scores read.
+
+
+```{r}
+m2 <- '
+  # regressions
+    read ~ 1 + ppsych + motiv
+ # covariance
+    ppsych ~~ motiv
+'
+fit2 <- sem(m2, data=dat)
+summary(fit2)
+```
+
+
+The corresponding output is as follows. Compare the number of free parameters and degrees of freedom to the simple regression.
+
+
+## 2.4. Multivariate regression with default covariance (Model 3A)
+Due to the added complexity of this and the following multivariate models, we will explicitly model intercepts in lavaan code but exclude them from the path diagrams. With that said, the path diagram for a multivariate regression model (Model 3A) is depicted as:
+
+![Fig16](fig16.png)
+
+Here x1 ppsych and xs motiv predict y1 read and only x2 motiv predicts y2 arith. The parameters $\phi_{11}, \phi_{22}$ represent the variance of the two exogenous variables respectively and $\phi_{12}$ is the covariance. Note that these parameters are modeled implicitly and not depicted in lavaan output. The parameters $\zeta_1, \zeta_2$ refer to the residuals of read and arith. Finally $\psi_{11},\psi_{22}$ represent the residual variances of read and arith and $\psi_{12}$ is its covariance. You can identify residual terms lavaan by noting a . before the term in the output.
+```{r}
+m3a <- '
+  # regressions
+    read ~ ppsych + motiv
+    arith ~ motiv
+'
+fit3a <- sem(m3a, data=dat)
+summary(fit3a)
+```
+As expected, the intercepts of read and arith are zero and its residual variances are 65.032 and 63.872. For multivariate regressions, the covariance of the residuals is given by default in lavaan and here estimated to be 39.179 (positive association between the variance of read and arith not accounted for by the exogenous variables. The relationship of read on ppsych is -0.216. For every one unit increase in Negative Parental Psychology, student Reading scores drop by 0.216 points controlling for the effects of student Motivation. The relationship of read on motivis 0.476 meaning as student Motivation increases by one unit, Reading scores increase by 0.476 points controlling for the effects of Negative Parental Psychology. Finally arith on motiv is 0.6; an increase of one point in student Motivation results in a 0.6 increase in Arithmetic scores.
+
+Is multivariate regression the same as running two separate linear regressions? Let’s run lm() to find out. First let’s run model of read on ppsych and motiv.
+
+```{r}
+m3b <- lm(read ~ ppsych + motiv, data=dat)
+(fit3b <- summary(m3b))
+```
+Now let’s run the model of arith on motiv in lm()
+
+```{r}
+m3c <- lm(arith ~ motiv, data=dat)
+(fit3c <- summary(m3c))
+```
+We see that the coefficients read ~~ ppsych is -0.216 in lavaan but -0.2747. Could this be rounding error? Furthermore, looking at the residual standard errors we see that the residual variance of arith is 64.12 which is different from lavaan‘s estimate of 63.872. Knowing what you know from the previous section, what could be the cause of this difference? We explore these questions in the following section.
+
+
+## 2.5. Multivariate regression removing default covariances (Model 3D)
+There are two facets to the question above. We already know previously that lm() uses the least squares estimator but lavaan uses maximum likelihood, hence the difference in residual variance estimates. However, regardless of which of the two estimators used, the regression coefficients should be unbiased so there must be something else accounting for the difference in coefficients. The answer lies in the implicit fact that lavaan by default will covary residual variances of endogenous variables .read ~~ .arith. Removing the default residual covariances, we see in the path diagram (Model 3D)
+
+
+![Fig17](fig17.png)
+
+Intro to SEM Model 3dRemoving the covariance of read and arith is the same as fixing its covariance to zero through the following syntax read ~~ 0*arith.
+
+```{r}
+m3d <- '
+  # regressions
+    read ~ 1 + ppsych + motiv
+    arith ~ 1 + motiv
+  # covariance
+    read ~~ 0*arith 
+'
+fit3d <- sem(m3d, data=dat)
+summary(fit3d)
+```
+
+Notice now the coefficient of read on ppsych is -0.275 and read on motiv is 0.461. Compare now to the m3b
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept) -1.336e-07  3.608e-01   0.000        1    
+ppsych      -2.747e-01  3.730e-02  -7.363 7.51e-13 ***
+motiv        4.613e-01  3.730e-02  12.367  < 2e-16 ***
+
+
+## 2.6. Known values, parameters, and degrees of freedom
+Both simple regression and multiple regression are saturated models which means that all parameters are fully estimated and there are no degrees of freedom. This is not necessarily true for multivariate regression models as Models 3A and 3D had degrees of freedom of 1 and 2 respectively. Let’s understand how the degrees of freedom is calculated. To begin, first count the number of known values in your observed population variance-covariance matrix $\Sigma$, given by the formula p(p+1)/2 where p is the number of items in your survey. To see why this is true refer to the optional section Degrees of freedom with means from Confirmatory Factor Analysis (CFA) in R with lavaan for the more technically accurate explanation. Looking at the variables in the multivariate regression, we would like to obtain the variance-covariance matrix for Reading, Arithmetic, Parental Psychology and Motivation. To obtain the sample covariance matrix $S=\hat\Sigma$, which is an estimate of the population covariance matrix $\Sigma$, use the command cov and reference the column index of the dataset by name dat[,c("read","arith","ppsych","motiv")].
+
+```{r}
+cov(dat[,c("read","arith","ppsych","motiv")])
+```
+
+The off-diagonal cells in $S$ correspond to bivariate sample covariances between two pairs of items; and the diagonal cells in 
+ correspond to the sample variance of each item (hence the term “variance-covariance matrix“). Reading is positively related to Arithmetic, but Reading has a negative relationship with Parental Psychology. Just as in the larger covariance matrix we calculated before, the lower triangular elements in the covariance matrix are duplicated with the upper triangular elements. For example, the covariance of Reading with Arithmetic is 73, which is the same as the covariance of Arithmetic with Reading (recall the property of symmetry). Because the covariances are duplicated, the number of free parameters in SEM is determined by the number of unique variances and covariances. With 4 items, the number of known values is p(p+1)/2 = 4(5)/2 = 10. The known values serve as the upper limit of the number of parameters you can possibly estimate in your model. The parameters coming from the model are called model parameters. Recall the multivariate model:
+$$\mathbf{y = \alpha + \Gamma x + \zeta}$$
+
+Since we care about the covariance of y, then by the assumption that $\alpha, x, \zeta$ are independent. Recall that covariance of a constant vector is zero since $Cov(\alpha)=E[(\alpha-E(\alpha))(\alpha-E(\alpha)]=E[0]=0$
+:
+$\Sigma(\theta)=Cov(\mathbf{y}) = Cov(\mathbf{\alpha} + \mathbf{\Gamma x} + \mathbf{\zeta}) = Cov(\mathbf{\alpha}) + Cov(\mathbf{\Gamma x}) + Cov(\mathbf{\zeta}) = \mathbf{\Gamma} Cov(\mathbf{x}) \mathbf{\Gamma}’ + \mathbf{\Psi} = \mathbf{\Gamma} \mathbf{\Phi} \mathbf{\Gamma}’ + \mathbf{\Psi}$
+
+This is a 2X2 matrix which serves as the upper left block of $\Sigma(\theta)$. Note that that full matrix of  $\Sigma(\theta)$ here is 4X4. Since there are exactly two exogenous variables and two endogenous variables, each block is a 2X2 matrix.
+
+$$\Sigma(\theta) =
+\begin{pmatrix}
+\mathbf{\Gamma \Phi \Gamma’ + \Psi} & \mathbf{\Gamma \Phi}\\
+\mathbf{\Phi \Gamma}’ & \mathbf{\Phi}
+\end{pmatrix}$$ 
+
+However, since model parameters can be completely determined by elements of y, we do not consider parameters of $\Phi$ or $\Phi \Gamma’$. Spelling out the covariance matrix of y,
+
+  
+$$\mathbf{\Gamma \Phi \Gamma’ + \Psi}
+=
+\begin{pmatrix}
+\gamma_{11} & \gamma_{12} \\
+\gamma_{21} & \gamma_{22}
+\end{pmatrix}
+\begin{pmatrix}
+\phi_{11} & \phi_{12}\\
+& \phi_{22}
+\end{pmatrix}
+\begin{pmatrix}
+\gamma_{11} & \gamma_{21} \\
+\gamma_{12} & \gamma_{22}
+\end{pmatrix}
++
+\begin{pmatrix}
+\psi_{11} & \psi_{12}\\
+& \psi_{22}
+\end{pmatrix}$$  
+  
+ 
+
+Notice that the $\alpha$ does not appear in covariance model. First consider the dimensions of each parameter in Model 3A and 3D. Since there are two endogenous variables and exogenous variables $\Gamma$ is 2X2 for a total of 4 parameters. For two exogenous variables, the dimension of $\Phi$ is 2X2 but by symmetry, $\phi_{12}=\phi_{21}$ which means we have 3 $\phi$’s. For two endogenous variables the dimension of $\Psi$ is also 2X2 but since $\psi_{12}=\psi_{21}$ there are a total of 3 $\psi$’s.
+
+Then the total number of (unique) parameters here is 4+3+3 =10  parameters. It’s not a coincidence then that the number of model parameters matches the number of known values. If we estimate every possible parameter then this is by definition a saturated model (see Model 3E below).
+
+## 2.7. Example using Model 3A
+For edification purposes, we will modify the syntax of Model 3A slightly (without going too deeply in technical details, this syntax models implied parameters explicitly and removes intercept parameters). You should now be able to match every term in this output to the path diagram.
+
+```{r}
+m3aa <- '
+ # regressions
+   read ~ ppsych + motiv
+   arith ~ motiv
+ # variance and covariance
+   ppsych ~~ ppsych
+   motiv ~~ motiv
+   ppsych ~~ motiv
+'
+fit3aa <- sem(m3aa, data=dat)
+summary(fit3aa)
+
+```
+
+## 2.8. Fully saturated Multivariate Regression (Model 3E)
+Now that we know how to distinguish between over-identified and just-identified models, we understand that adding a single path of $\gamma_{21}$ turns Model 3A into a just-identified or fully saturated model which we call Model 3E.
+
+![Fig18](fig18.png)
+
+
+In lavaan, this is easy as adding the additional path of arith on ppsych but remembering that lavaan also by default models the covariance of $\psi_{12}$ which is the residual covariance between read and arith.
+
+```{r}
+m3e <- '
+  # regressions
+    read ~ 1 + ppsych + motiv
+    arith ~ 1 + ppsych + motiv
+'
+fit3e <- sem(m3e, data=dat)
+summary(fit3e)
+```
+We see that Negative Parental Psychology has a negative relationship with Arithmetic: for every one unit increase in the exogenous variable ppsych, the endogenous variable read decreases by 0.275.
+
+Up to this point, we have explored multiple regression where one endogenous variable is predicted by two or more exogenous variables, multivariate regression where multiple exogenous variables can predict multiple endogenous variables. Finally, in the section to follow, we will see how path analysis allows endogenous variables to predict each other.
+
+
+## 2.9. Path analysis (Model 4A)
+Multivariate regression is a special case of path analysis where only exogenous variables predict endogenous variables. Path analysis is a more general model where all variables are still manifest but endogenous variables are allowed to explain other endogenous variables. Since $\Gamma$ specifies relations between an endogenous (y) and exogenous (x) variable, we need to create a new matrix $B$ that specifies the relationship between two endogenous (y) variables.
+
+$$\mathbf{y = \alpha + \Gamma x + By + \zeta}$$
+
+The matrix $B$ is a pXp matrix that is not necessarily symmetric. The rows of this matrix specify which y variable is being predicted and the columns specify which y’s are predicting. For example, $\beta_{21} is in the second row meaning y2 is being predicted and first column meaning y1 is predicting.
+
+Let’s extend our previous multivariate regression Model 3A so that we believe read which is an endogenous variable also predicts arith . Then the path diagram for Model 4A is shown below. What is the only path that is different between Model 3A and 4A?
+
+![Fig19](fig19.png)
+
+
+To see the matrix formulation for Model 4A, we have:
+$$\begin{pmatrix}
+y_{1} \\
+y_{2}
+\end{pmatrix}
+=
+\begin{pmatrix}
+\alpha_1 \\
+\alpha_2
+\end{pmatrix}
++
+\begin{pmatrix}
+\gamma_{11} & \gamma_{12}\\
+0 & \gamma_{22}
+\end{pmatrix}
+\begin{pmatrix}
+x_1 \\
+x_2
+\end{pmatrix}
++
+\begin{pmatrix}
+0 & 0\\
+\beta_{21} & 0
+\end{pmatrix}
+\begin{pmatrix}
+y_1 \\
+y_2
+\end{pmatrix}
++
+\begin{pmatrix}
+\zeta_{1}\\
+\zeta_{2}
+\end{pmatrix}$$
+
+
+Definitions
+* $\mathbf{y} = (y_1, \cdots, y_p)’$ vector of p endogenous variables
+* $\mathbf{x} =(x_1, \cdots, x_q)’$ vector of q exogenous variables
+* $\alpha$ vector of $p$ intercepts
+* $\Gamma$ matrix of regression coefficients (pXq) of exogenous to endogenous variables whose i-th row indicates the endogenous variable and j-th column indicates the exogenous variable
+* $B$ matrix of regression coefficients (pXp) of endogenous to endogenous variables whose i-th row indicates the source variable and j-th column indicates the target variable
+* $\mathbf{\zeta}= ( \zeta_1, \cdots, \zeta_p)’$ vector of residuals
+
+Assumptions
+* $E(\zeta)=0$ the mean of the residuals is zero
+* $\zeta$ is uncorrelated with x
+* $(I - B)$ is invertible (for example $B \ne I$)
+
+# 3. Modeling a path analysis in lavaan
+Just as in Model 3A, we hypothesize that Negative Parental Psychology ppsych and Motivation motiv predict Reading scores read and Motivation predicts Arithmetic. Additionally, suppose we believe also that students who have higher reading ability (Reading read) are able to read word problems more effectively which can positively predict math scores (Arithmetic arith). The syntax is as easy in lavaan as adding read as a predictor.
+
+```{r}
+m4a <- '
+  # regressions
+    read ~ ppsych + motiv
+    arith ~ motiv + read
+  # covariance
+  #  read ~~ 0*arith 
+'
+fit4a <- sem(m4a, data=dat)
+summary(fit4a)
+```
+We see that Reading positively predicts Arithmetic over and above the effects of Motivation. So for every one unit increase in Reading scores, Arithmetic is predicted to increase by 0.573 points. Note also that unlike Model 3A, the residual covariance of .arith and .read are turned off by default. This is because by adding a regression path from Reading to Arithmetic, we presume that Reading accounts for all the variance in Arithmetic hence a residual covariance is unnecessary.
+
+
+## 4.1. Modification index
+We see that the path analysis Model 4A as well as the multivariate regressions (Models 3A and 3D) are over-identified models which means that their degrees of freedom is greater than zero. Over-identified models allow flexibility in modeling the remaining degrees of freedom. For example in Model 4A, we can add an additional path between ppsych and read but we can also add a covariance between .read and .arith. Adding either of these parameters results in a fully saturated model. Without a strong a priori hypothesis, it may be difficult ascertain the best parameter to estimate. One solution is to use the modification index, which is a one degree of freedom chi-square test that assesses how the model chi-square will change as a result of including the parameter in the model. The higher the chi-square change, the bigger the impact of adding the additional parameter. To implement the modification index in lavaan, we must input into the modindices function a previously estimated lavaan model, which in this case is fit4a . The option sort=TRUE requests the most impactful parameters be placed first based on the change in chi-square.
+
+```{r}
+modindices(fit4a,sort=TRUE)
+```
+The columns represent the
+
+* left-hand side (lhs)
+* operation (op)
+* right-hand side of the equation (rhs)
+* the modification index (mi) which is a 1-degree chi-square statistic
+* expected parameter change (epc) represents how much the  parameter is expected to change
+* sepec.lv standardizes the epc by the latent variable (in this case there are none)
+* sepec.all standardizes by both Y and X
+* sepc.nox standardizes all but X variables (in this case Y only)
+
+We see that by far the most impactful parameter is motiv ~ arith with a chi-square change of 68.073. The modification index is suggesting that we regard Motivation as an endogenous predictor and Arithmetic as its exogenous predictor. The expected change (from zero) in this regression coefficient would be 8.874. Although this sounds promosing, not all modification index suggestions make sense. Recall that the chi-square for Model 4A is 4.870 and subtracting 68.073 = -63.20 makes the resulting chi-square negative! Additionally, Rows 17, 20, 11, 19, 10 and 22 have a chi-square change of zero which would make their modifications unnecessary. For this example, we decide to look at the second row which suggests that we maintain Arithmetic as an endogenous variable but add Negative Parental Psychology as an exogenous variable. Based on our hypothesis, it makes sense that Negative Parental Psychology predicts both Arithmetic and Reading. As suggested, we add arith ~ ppsych into our path analysis Model 4A and rename it Model 4B. As an exercise, let’s manually re-run Model 4B and see how closely the expected parameter change epc matches 0.068 and the expected chi-square change of 4.847.
+
+True or False. You should always use modification indexes to improve model fit.
+
+Answer: False. Not all modifications to the model make sense. For example, the covariance of residuals is often times seen as an “easy” way to improve fit without changing the model. However, by adding residual covariances, you are modeling unexplained covariance between variables that by definition are not modeled by your hypothesized model. Although modeling these covariances artificially improves fit, they say nothing about the causal mechanisms your model hypothesizes.
+
+True or False. Each modification index tests one parameter at a time.
+
+Answer: True. Each modification index is a 1 degree of freedom chi-square difference test which means that it only tests one parameter at a time, although the algorithm simultaneously estimates all parameter changes.
+
+True or False. Two fully saturated models must have exactly the same estimated parameters.
+
+Answer: False. There are many ways to specify a saturated model that results in the same zero degrees of freedom. Just because a model is saturated does not mean it is the best model because there may be many more equivalently saturated models.
+
+## 4.2. Path analysis after modification (Model 4B)
+Based on the modification index above we decide to add arith ~ ppsych to Model 4A and call it Model 4B.
+
+![Fig20](fig20.png)
+
+```{r}
+m4b <- '
+  # regressions
+    read ~ 1 + ppsych + motiv
+    arith ~ 1 + motiv + read + ppsych
+'
+fit4b <- sem(m4b, data=dat)
+summary(fit4b, fit.measures=TRUE)
+```
+The modification index is as follows:
+
+
+```{r}
+modindices(fit4b,sort=TRUE)
+```
+
+### Quiz
+Why is there no modification index left in fit4b? Is the chi-square you obtain the same or different from the modification index?
+
+Answer: There is no modification index because it is a saturated model. The modification index is close to the Test User chi-square but slightly bigger since it is an approximation.
+
+In Model 4B, we see that the degrees of freedom is zero which is what we expected from the modification index of 4.847. Recall that for Model 4A, the chi-square was 4.870 which is very close to our approximation. Additionally, the coefficient estimate is 0.068 which matches our modification index output exactly! In general, the modification index is just an approximation of the chi-square based on the Lagrange multiplier and may not match the results of actually re-running the model and obtaining the difference of the chi-square values. The degrees of freedom however, match what we expect, which is a one degree of freedom change resulting in our saturated path analysis model (Model 4B).
+
+### Caveats of using modification indexes
+Just because modification indexes present us with suggestions for improving our model fit does not mean as a researcher we can freely alter our model. Note that Type I error is the probability of finding a false positive, and altering our model based on modification indexes can have a grave impact on our Type I error. This means that you may be finding many statistically significant relationships that fail to be replicated in another sample. See our page on Retiring Statistical Significance for more information about the consequences of tweaking your hypothesis after your hypothesis has been made.
+
+
+# 5. Model Fit Statistics
+Modification indexes gives suggestions about ways to improve model fit, but it is helpful to assess the model fit of your current model to see if improvements are necessary. As we have seen, multivariate regression and path analysis models are not always saturated, meaning the degrees of freedom is not zero. This allows us to look at what are called Model Fit Statistics, which measure how closely the (population) model-implied covariance matrix $\Sigma{(\theta)}$ matches the (population) observed covariance matrix $\Sigma$. SEM is also known as covariance structure analysis, which means the hypothesis of interest is regarding the covariance matrix. The null and alternative hypotheses in an SEM model are
+$$H_0: \Sigma{(\theta)}=\Sigma$$
+$$H_1: \Sigma{(\theta)}\ne\Sigma$$
+
+
+Typically, rejecting the null hypothesis is a good thing, but if we reject the SEM null hypothesis then we would reject our user model (which is bad). Failing to reject the model is good for our model because we have failed to disprove that our model is bad. Note that based on the logic of hypothesis testing, failing to reject the null hypothesis does not prove that our model is the true model, nor can we say it is the best model, as there may be many other competing models that can also fail to reject the null hypothesis. However, we can certainly say it isn’t a bad model, and it is the best model we can find at the moment. Think of a jury where it has failed to prove the criminal guilty, but it doesn’t necessarily mean he is innocent. Can you think of a famous person from the 90’s who fits this criteria?
+
+Since we don’t have the population covariances to evaluate, they are estimated by the sample model-implied covariance $\Sigma(\hat{\theta})$ and sample covariance $S$. Then the difference $S-\Sigma(\hat{\theta})$ is a proxy for the fit of the model, and is defined as the residual covariance with values close to zero indicating that there is a relatively good fit.
+
+
+
+By default, lavaan outputs the model chi-square a.k.a Model Test User Model. To request additional fit statistics you add the fit.measures=TRUE option to summary, passing in the lavaan object fit4a.
+
+```{r}
+#fit statistics
+summary(fit4a, fit.measures=TRUE)
+```
+
+When fit measures are requested, lavaan outputs a plethora of statistics, but we will focus on the four commonly used ones:
+
+* 1. Model chi-square is the chi-square statistic we obtain from the maximum likelihood statistic (in lavaan, this is known as the Test Statistic for the Model Test User Model)
+* 2. CFI is the Comparative Fit Index – values can range between 0 and 1 (values greater than 0.90, conservatively 0.95 indicate good fit)
+* 3. TLI Tucker Lewis Index which also ranges between 0 and 1 (if it’s greater than 1 it should be rounded to 1) with values greater than 0.90 indicating good fit. If the CFI and TLI are less than one, the CFI is always greater than the TLI.
+* 4. RMSEA is the root mean square error of approximation
+    + In lavaan, you also obtain a p-value of close fit, that the RMSEA < 0.05. If you reject the model, it means your model is not a close fitting model.
+    
+
+## 5.1. The baseline model
+The baseline model can be thought of as the “worst-fitting” model and simply assumes that there is absolutely no covariance between variables. Suppose we modified Model 4A to become a baseline model, we would take out all paths and covariances; essentially estimating only the variances. Since there is are no regression paths, there are no endogenous variables in our model and we would only have x’s and $\phi$’s.
+
+![Fig21](fig21.png)
+
+To model this in lavaan fit a model that simply estimates the variances of every variable in your model. For example read ~~ read estimates the exogenous variance of read ($\phi_{11}$).
+
+```{r}
+m4c <- '
+  # variances only
+    read ~~ read 
+    ppsych ~~ ppsych
+    motiv ~~ motiv
+    arith ~~ arith
+'
+fit4c <- sem(m4c, data=dat)
+summary(fit4c, fit.measures=TRUE)  
+```
+To confirm whether we have truly generated the baseline model, we compare our model to the Model Test Baseline Model in lavaan. We see that the User Model chi-square is 707.017 with 6 degrees of freedom, which matches the Baseline Model chi-square. We will see in the next section how baseline models are used in testing model fit.
+  
+# 5. The Measurement Model
+We have talked so far about how to model structural relationships between observed variables. A measurement model is essentially a multivariate regression model where the predictor is an exogenous or endogenous latent variable (a.k.a factor). The model is defined as
+
+$$\mathbf{x= \tau_x + \Lambda_x \xi+ \delta}$$
+
+Definitions
+* $\mathbf{x} =(x_1, \cdots, x_q)’$ vector of x-side indicators
+* $\mathbf{\tau_x}$ vector of q intercepts for x-side indicators
+* $\mathbf{\xi}$ vector of n latent exogenous variables
+* $\mathbf{\delta}= ( \delta_1, \cdots, \delta_q)’$ vector of residuals for x-side indicators
+* $\mathbf{\Lambda_x}$ matrix of loadings (qXn) corresponding to the latent exogenous variables
+* $\mathbf{\theta_{\delta}}$ variance or covariance of residuals for x-side indicators
+
+The term $\mathbf{\tau_{x1}}$ means the intercept of the first item, and  $\lambda^x_2$ is the loading of the second item with the factor and $\epsilon_3$ is the residual of the third item, after accounting for the only factor.
+
+Suppose we have three outcomes or x-side indicators (x1, x2, x3) measured by a single latent exogenous variable $\xi$. Then the path diagram (Model 5A) for our factor model looks like the following. Take note that the intercepts $\mathbf{\tau_x}$ are not shown but still modeled, and that the measurement arrows are pointing to the left.
+
+![Fig22](fig22.png)
+
+
+
+
+## 5.1. Identification of a three-item factor analysis
+Identification of the one factor model with three items is necessary due to the fact that we have 7 parameters from the model-implied covariance matrix $\Sigma(\theta)$ (e.g., three factor loadings, three residual variances and one factor variance) but only 3(4)/2=6 known values to work with. The extra parameter comes from the fact that we do not observe the factor but are estimating its variance. In order to identify a factor model with three or more items, there are two options known as the marker method and the variance standardization method. The
+
+* 1. marker method fixes the first loading of each factor to 1,
+* 2. variance standardization method fixes the variance of each factor to 1 but freely estimates all loadings.
+
+In matrix notation, the marker method (Option 1) can be shown as
+$$\Sigma(\theta)=
+\phi_{11}
+\begin{pmatrix}
+1 \\
+\lambda^{x}_{2} \\
+\lambda^{x}_{3}
+\end{pmatrix}
+\begin{pmatrix}
+1 & \lambda^{x}_{2} & \lambda^{x}_{3} \\
+\end{pmatrix}
++
+\begin{pmatrix}
+\theta^{\delta}_{11} & 0 & 0 \\
+0 & \theta^{\delta}_{22} & 0 \\
+0 & 0 & \theta^{\delta}_{33} \\
+\end{pmatrix}$$
+
+In matrix notation, the variance standardization method (Option 2) looks like
+
+$$\Sigma(\theta)=
+(1)
+\begin{pmatrix}
+\lambda^{x}_{1} \\
+\lambda^{x}_{2} \\
+\lambda^{x}_{3}
+\end{pmatrix}
+\begin{pmatrix}
+\lambda^{x}_{1} & \lambda^{x}_{2} & \lambda^{x}_{3} \\
+\end{pmatrix}
++
+\begin{pmatrix}
+\theta^{\delta}_{11} & 0 & 0 \\
+0 & \theta^{\delta}_{22} & 0 \\
+0 & 0 & \theta^{\delta}_{33} \\
+\end{pmatrix}$$
+
+Notice in both models that the residual covariances stay freely estimated.
+
+Exercise
+For the variance standardization method, go through the process of calculating the degrees of freedom. If we have six known values is this model just-identified, over-identified or under-identified?
+
+Answer: We start with 10 unique parameters in the model-implied covariance matrix. Since we fix one factor variance, and 3 unique residual covariances, the number of free parameters is 10 - (1+3) = 6. Since we have 6 known values, our degrees of freedom is 6-6=0, which is defined to be saturated.
+
+
+## 5.2. Exogenous factor analysis (Model 5A)
+Let’s see how we can run a one-factor measurement in lavaan with Verbal IQ verbal, SES ses and Negative Parental Psychology ppsych as indicators of the factor (latent exogenous variable) Risk risk.
+
+
+```{r}
+m5a <- 'risk =~ verbal + ses + ppsych
+#intercepts (nu = tau) 
+verbal ~ 1
+ses ~ 1 
+ppsych ~ 1' 
+fit5a <- sem(m5a, data=dat) 
+summary(fit5a, standardized=TRUE) 
+```
+
+The first line is the model statement. Recall that =~ represents the indicator equation where the latent variable is on the left and the indicators (or observed variables) are to the right the symbol. Here we name our factor risk, which is indicated by verbal, ses and ppsych (note the names must match the variable names in the dataset). Here we explicitly model the intercepts of the indicators using verbal ~ 1, ses ~ 1 and ppsych ~ 1. Then store the model into object m5a for Model 5A. The second line is where we specify that we want to run the analysis using the sem function, which is actually a wrapper for the lavaan function. The model to be estimated is m5a and the dataset to be used is dat; storing the output into object fit5a. Finally summary(fit5a, standardized=TRUE) requests a summary of the analysis, outputting the estimator used, the number of free parameters, the test statistic, estimated means, standardized loadings and standardized variances.
+
+
+By default, lavaan chooses the marker method (Option 1) if nothing else is specified. To better interpret the factor loadings, often times you would request the standardized solutions. Notice two additional columns in the output, Std.lv and Std.all. For users of Mplus, Std.lv corresponds to STD and Std.all corresponds to STDYX. In the variance standardization method Std.lv, we only standardize by the predictor (the factor, X). Std.all not only standardizes by the variance of the latent variable ($\xi$) and also by the variance of outcome which in this case are the indicators x.
+
+
+## 5.3. A note on endogenous measurement models (Model 5B)
+Not all latent variables are exogenous. If in the case that the latent variable is endogenous we will rename the factor $\eta$.
+
+Suppose again that we have three items except now they are labeled (y1, y2, y3). For a latent endogenous variable, the structure of the measurement model remains the same except now the parameters are re-labeled as y-side variables. The path diagram for Model 5B is shown below (note, intercepts $\mathbf{\tau_y}$ are not shown but still implicitly modeled):
+
+![Fig23](fig23.png)
+Note that the direction of the arrows face the right. In LISREL path diagram notation, exogenous latent variables have measurement arrows pointing to the left and endogenous latent variables have measurement arrows pointing to the right. Exogenous latent variables correspond to x-side models and endogenous latent variables to y-side models. Here the y-side measurement model is defined as
+
+
+$$\mathbf{y= \tau_y + \Lambda_y \eta + \epsilon}$$
+
+Definitions
+* $\mathbf{y} = (y_1, \cdots, y_p)’$vector of y-side indicators
+* $\mathbf{\tau_y}$ vector of p intercepts for y-side indicators
+* $\eta$ vector of m latent endogenous variables
+* $\mathbf{\epsilon}= ( \epsilon_1, \cdots, \epsilon_p)’$ vector of residuals for y-side indicators
+* $\Lambda_y$ matrix of loadings (mXq) corresponding to the latent endogenous variables
+* $\theta_{\epsilon}$ variance or covariance of residuals for y-side indicators
+
+The main difference between Models 5A and 5B are simply that Model 5A is an exogenous latent factor analysis whereas Model 5B is an endogenous latent factor analysis, meaning that it is being predicted by another latent variable. Since we currently have no predictors of $\eta_1$, this is just a hypothetical model. In the section below on structural regression, we will see an endogenous latent variable modeled with real-world data. Exogenous latent measurement models are what are classified as x-side variables which point to the left in a path diagram and endogenous latent measurement models are known as y-side latent variables which point to the right in a path diagram.
+
+Up to this point we have studied multivariate measurement models that define the relationship between indicators and latent variables, as well as multivariate regression and path models that define the causal relationship between observed endogenous and exogenous variables. In the next section, we will see how structural regression models allows us to model relationships between exogenous and endogenous latent variables.
+
+
+# 6. The Structural Model
+
+## 6.1. Structural Regression Model
+So far we have discussed all the individual components that make up the structural regression model. Recall that multivariate regression involves regression with simultaneous endogenous variables and path analysis allows for explanatory endogenous variables. Confirmatory factor analysis is a measurement model that links latent variables to indicators. Finally, structural regression unifies the measurement and structural models to allow for explanatory latent variables, whether endogenous or exogenous.
+$$\mathbf{x= \tau_x + \Lambda_x \xi+ \delta}$$
+$$\mathbf{y= \tau_y + \Lambda_y \eta + \epsilon}$$
+$$\mathbf{\eta = \alpha + B \eta + \Gamma \xi + \zeta}$$
+### Definitions
+Measurement variables
+
+* $\mathbf{x} =(x_1, \cdots, x_q)’$ vector of x-side indicators
+* $\mathbf{y} = (y_1, \cdots, y_p)’$vector of y-side indicators
+* $\mathbf{\tau_y}$ vector of p intercepts for y-side indicators
+* $\mathbf{\tau_x}$ vector of q intercepts for x-side indicators
+* $\mathbf{\xi}$ vector of n latent exogenous variables
+* $\eta$ vector of m latent endogenous variables
+* $\mathbf{\delta}= ( \delta_1, \cdots, \delta_q)’$ vector of residuals for x-side indicators
+* $\mathbf{\epsilon}= ( \epsilon_1, \cdots, \epsilon_p)’$ vector of residuals for y-side indicators
+* $\mathbf{\Lambda_x}$ matrix of loadings (qXn) corresponding to the latent exogenous variables
+* $\Lambda_y$ matrix of loadings (mXq) corresponding to the latent endogenous variables
+* $\mathbf{\theta_{\delta}}$ variance or covariance of residuals for x-side indicators
+* $\theta_{\epsilon}$ variance or covariance of residuals for y-side indicators
+
+
+Structural variables
+
+* $\alpha$ a vector of m intercepts
+* $\Gamma$ a matrix of regression coefficients (mXn) of latent exogenous to latent endogenous variables whose i-th row indicates the latent endogenous variable and j-th column indicates the latent exogenous variable
+* $B$ a matrix of regression coefficients (mxm) of latent endogenous to latent endogenous variables whose i-th row indicates the target endogenous variable and j-th column indicates the source endogenous variable.
+* $\zeta= ( \zeta_1, \cdots, \zeta_m)’$ vector of residuals for the latent endogenous variable
+
+Assumptions
+* $\eta$ and $\xi$ are not observed
+* $\epsilon$ and $\delta$ are errors of measurement for y and x respectively
+* $\epsilon$ is uncorrelated with $\delta$
+
+To specify the full structural regression model, it is more intuitive to start with the measurement model and then specify how the latent variables relate to each other (the structural model). In order for latent exogenous variables to explain latent endogenous variables, two separate measurement models must be established.
+
+First let’s specify the latent exogenous measurement model with six items where the first three x-side indicators (x1, x2, x3) are measured by $\xi_1$ and the latter three (x4, x5, x6) are measured by $\xi_2$. The un-identified measurement model for two latent exogenous variables with three indicators each is:
+
+$$\begin{pmatrix}
+x_{1} \\
+x_{2} \\
+x_{3} \\
+x_{4} \\
+x_{5} \\
+x_{6} \\
+\end{pmatrix}
+=
+\begin{pmatrix}
+\tau_{x_{1}} \\
+\tau_{x_{2}} \\
+\tau_{x_{3}} \\
+\tau_{x_{4}} \\
+\tau_{x_{5}} \\
+\tau_{x_{6}}
+\end{pmatrix}
++
+\begin{pmatrix}
+\lambda^{x}_{11} & \lambda^{x}_{12} \\
+\lambda^{x}_{21} & \lambda^{x}_{22} \\
+\lambda^{x}_{31} & \lambda^{x}_{32} \\
+\lambda^{x}_{41} & \lambda^{x}_{42} \\
+\lambda^{x}_{51} & \lambda^{x}_{52} \\
+\lambda^{x}_{61} & \lambda^{x}_{62}
+\end{pmatrix}
+\begin{pmatrix}
+\xi_{1} \\
+\xi_{2}
+\end{pmatrix}
++
+\begin{pmatrix}
+\delta_{1} \\
+\delta_{2} \\
+\delta_{3} \\
+\delta_{4} \\
+\delta_{5} \\
+\delta_{6}
+\end{pmatrix}$$
+
+Now that we’ve established the exogenous measurement model, let’s move to the endogenous measurement model. The three y-side indicators (y1, y2, y3) are measured by one factor $\eta_1$.
+
+ 
+$$\begin{pmatrix}
+y_{1} \\
+y_{2} \\
+y_{3}
+\end{pmatrix}
+=
+\begin{pmatrix}
+\tau_{y_{1}} \\
+\tau_{y_{2}} \\
+\tau_{y_{3}}
+\end{pmatrix}
++
+\begin{pmatrix}
+\lambda^{y}_{11} \\
+\lambda^{y}_{21} \\
+\lambda^{y}_{31}
+\end{pmatrix}
+\begin{pmatrix}
+\eta_{1}
+\end{pmatrix}
++
+\begin{pmatrix}
+\epsilon_{1}\\
+\epsilon_{2} \\
+\epsilon_{3}
+\end{pmatrix}$$
+
+
+ 
+ 
+ 
+
+Now that we’ve established both x-side and y-side measurement models, we can specify the structural model.
+
+
+## 6.2. Structural regression with one endogenous variable (Model 6A)
+Just as the structural model in multivariate regression and path analysis specifies relationships among observed variables, structural regression specifies the relationship between latent variables. In Model 6A, we have two latent exogenous variables ($\xi_1, \xi_2$) predicting one latent endogenous variable ($\eta_1$).
+
+$$\eta_{1}
+=
+\alpha_1
++
+\begin{pmatrix}
+\gamma_{11} & \gamma_{12}
+\end{pmatrix}
+\begin{pmatrix}
+\xi_1 \\
+\xi_2
+\end{pmatrix}
++
+0 \cdot \eta_1
++
+\zeta_{1}$$  
+ 
+
+Recall that the $\Gamma$ matrix specifies the relationship  between exogenous and endogenous variables, so that $\gamma_{11}$ is the regression path of the first endogenous variable $\eta_1$ with the first exogenous variable $\xi_1$ and 
+$\gamma_{12}$ is the regression path of $\eta_1$ with the second exogenous variable $\xi_2$. Since there are no endogenous variables predicting each other, $B=0$.
+
+
+![Fig24](fig24.png)
+
+Let’s use lavaan to implement Model 6A with our dataset. First, establish the measurement model and proceed to the structural. Adjustment is the first latent exogenous variable $\xi_1$ consisting of three x-side indicators – Motivation, Harmony and Stability, adjust =~ motiv + harm + stabi. Risk is the second latent exogenous variable $\xi_s$ with three x-side indicators, Verbal IQ, Negative Parental Psychology and SES risk =~ verbal + ppsych + ses. Then proceed to the only endogenous variable, Achievement ($\eta_1$) with three y-side indicators Reading, Arithmetic and Spelling achieve =~ read + arith + spell. Finally, let’s establish the structural regression. We hypothesize that Adjustment positively predicts and Risk negatively predicts student Achievement and in lavaan we specify achieve ~ adjust + risk. Note that we do not explicitly model the intercepts for our latent regressions. (How would you explicitly model them?)
+
+```{r}
+m6a <- '
+# measurement model
+adjust =~ motiv + harm + stabi
+risk =~ verbal + ppsych + ses
+achieve =~ read + arith + spell
+# regressions
+achieve ~ adjust + risk
+'
+fit6a <- sem(m6a, data=dat)
+summary(fit6a, standardized=TRUE, fit.measures=TRUE)
+```
+
+
+## 6.3. Structural regression with two endogenous variables (Model 6B)
+Suppose we want to consider a single exogenous latent variable 
+$\xi_1$ predicting two endogenous latent variables $\eta_1$, $\eta_2$ and  additionally that one of the endogenous variables predicts another. What additional matrix do you think we need? Since we have already established the measurement model in 6A we can re-use the specification, making note that the measurement model now has one x-side model and two y-side models. However, not only do we need $\Gamma$ to model the relationship of the exogenous variable to the two endogenous variables, we need the 
+$B$ matrix to specify the relationship of the first endogenous variable to the other.
+
+$$\begin{pmatrix}
+\eta_{1} \\
+\eta_{2}
+\end{pmatrix}
+=
+\begin{pmatrix}
+\alpha_1 \\
+\alpha_2
+\end{pmatrix}
++
+\begin{pmatrix}
+\gamma_{11}\\
+\gamma_{21}
+\end{pmatrix}
+\xi_1
++
+\begin{pmatrix}
+0 & 0\\
+\beta_{21} & 0
+\end{pmatrix}
+\begin{pmatrix}
+\eta_1 \\
+\eta_2
+\end{pmatrix}
++
+\begin{pmatrix}
+\zeta_{1}\\
+\zeta_{2}
+\end{pmatrix}$$
+
+Writing out the equations we get:
+
+$$\eta_{1}
+=
+\alpha_1
++
+\gamma_{11} \xi_1
++
+\zeta_{1}$$ 
+
+$$\eta_{2}
+=
+\alpha_2
++
+\gamma_{21} \xi_1
++
+\beta_{21} \eta_1
++
+\zeta_{2}$$ 
+
+The first equation specifies that the first endogenous variable is being predicted only by the exogenous variable whereas the second equation specifies that the second endogenous variable is being predicted by both the exogenous variable and first endogenous variable.
+
+![Fig25](fig25.png)
+
+
+Since lavaan uses what are known as all 
+-side models, there is no need to different between exogenous and endogenous latent variables. As such, the measurement model in 6B is exactly the same as in Model 6A. The only modification then is the structural regression. We hypothesize that Risk negatively predicts Adjustment adjust ~ adjust and that Adjustment (an endogenous variable) and Risk (an exogenous variable) predict Achievement achieve ~ adjust + risk.
+
+```{r}
+m6b <- '
+# measurement model
+adjust =~ motiv + harm + stabi
+risk =~ verbal + ses + ppsych
+achieve =~ read + arith + spell
+# regressions
+adjust ~ risk 
+achieve ~ adjust + risk
+'
+fit6b <- sem(m6b, data=dat)
+summary(fit6b, standardized=TRUE, fit.measures=TRUE)
+```
+
+## 6.4. Structural regression with an observed endogenous variable (Model 6C)
+Structural models relate latent to latent variables. Suppose you wanted to look at how Risk or Adjustment relate in particular to Reading scores rather than overall student achievement. In LISREL notation, the matrices $\Gamma$ or $B$ in the structural regression allow only for relationships among latent variables. However, lavaan and other software programs such as Mplus allow the user to easily specify the relationship between an observed and latent variable. The code is as easy as specifying read ~ adjust + risk where adjust and risk are latent variables.
+
+```{r}
+#structural regression model C indicator DV
+m6c <- '
+# measurement model
+adjust =~ motiv + harm + stabi
+risk =~ verbal + ses + ppsych
+# regressions
+adjust ~ risk 
+read ~ adjust + risk
+'
+fit6c <- sem(m6c, data=dat)
+summary(fit6c, standardized=TRUE, fit.measures=TRUE)
+```
+The results suggest that Adjustment and Risk are positively associated with Reading scores, such that a one unit increase in adjust leads to a 0.285 increase in read and a one unit increase in risk leads to a 0.853 increase in read (adjusting for other variables in the model). In the following section, we will see how to circumvent the restriction that $\Gamma$ and $B$ are specified only between latent variables.
+
+## 6.5. Model 6C (Manual Specification)
+The reason that lavaan makes it easy to specify the relationship between observed endogenous variables and latent exogenous variables in a structural regression is because it uses all 
+-side LISREL notation, which does not differentiate the $B$ and $\Gamma$ matrices. In traditional LISREL notation however, the $\Gamma$ and $B$ matrices contain the only allowable regression paths. As an instructional exercise, we will recreate Model 6C but still impose the restrictions on $B$. This workaround can be accomplished by setting read as the single indicator of the latent endogenous variable readf. For identification, constrain its loading to 1 and set the residual variance of the exogenous read to 0 (e.g., Double subscripts: use braces to clarify
+). The path diagram can be visualized as:
+
+![Fig26](fig26.png)
+
+
+If you were to run this model in lavaan, it will give a warning like the one below.
+
+Warning messages:
+1: In lav_model_estimate(lavmodel = lavmodel, lavpartable = lavpartable,  :
+  lavaan WARNING: the optimizer warns that a solution has NOT been found!
+2: In lav_model_estimate(lavmodel = lavmodel, lavpartable = lavpartable,  :
+  lavaan WARNING: the optimizer warns that a solution has NOT been found!
+  
+  
+This suggests that this single-indicator constraint may be incompatible with the default optimizer. To fix this error, re-run the analysis and change the default optimization method from NLMINB (Unconstrained and box-constrained optimization using PORT routines) to BFGS (Broyden–Fletcher–Goldfarb–Shanno algorithm) by adding the syntax optim.method=list("BFGS"). Note that using BFGS takes a whopping 4563 iterations but eventually converges.
+
+
+```{r}
+#model6c (manual specification) 
+m6cc <- '
+  # measurement model
+    adjust =~ motiv + harm + stabi
+    risk =~ verbal + ses + ppsych
+  #single indicator factor
+    readf =~ 1*read
+  #variance of observed variable to 0
+    read ~~ 0*read
+  # regressions
+    adjust ~ risk 
+    readf ~ adjust + risk
+'
+fit6cc <- sem(m6cc, data=dat, )
+summary(fit6cc)
+```
+The results we obtain are similar to the results from the output of m6c using NLMINB, given slight rounding errors due to the different optimization method used.
+
+# 7. Conclusion
+As we have seen, structural equation modeling is a broad framework that encompasses a vast array of linear models, namely linear regression, multivariate regression, path analysis, confirmatory factor analysis and structural regression. These models are parameterized rigorously under the LISREL (linear structural relations) framework developed by Karl Joreskög in 1969 and 1973. Understanding the matrix parameterizations is important not so much for practical implementation but to allow the data analyst to fully understand the nuances of each SEM model subtype. For example, a latent model must be identified by its corresponding observed indicators, a restriction that is not needed in path analysis models where all variables are observed. Additionally, a model that apparently predicts a latent variable to an observed endogenous variable is in fact a latent structural regression where the observed endogenous variable is forced to become a single indicator measurement model with constraints. These subtleties are not apparent to the causal analyst until he or she understands that $\Gamma$ and $B$ matrices in structural regression specify relationships only between latent variables. Although not a necessity for implementation, distinguishing between matrices such as  $\Gamma$ and $B$ determine what type of model is considered. For example in a path analysis model, setting $B=0$ is equivalent to the multivariate regression where the only predictions are between observed exogenous and observed endogenous variables. Knowing that path analysis models do not contain $\eta$ or $\xi$ variables means understanding that path analysis is only appropriate for observed variables. Once the analyst is able to distinguish between these parameters, he or she will begin o understand the theoretical underpinnings of the structural equation model. However, distinguishing between  $\Gamma$ and $B$ is not sufficient to understanding all of SEM, and we do not purport to instill mastery to the reader in one succinctly written website. Further pages may delve more deeply into estimation, as well as more complex topics such as multigroup SEM, latent growth models, and measurement invariance testing. There are also a tremendous number of literature and books on SEM that we hope the reader will take the time to read. At the very least, we hope you have found this introductory seminar to be useful, and we wish you best of luck on your research endeavors.
+ 
+![Fig27](fig27.png)
+
+
+
+
+
+
+

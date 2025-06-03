@@ -1,0 +1,3178 @@
+---
+title: "match"
+author: "Cheon Geun Choi"
+date: "2024-08-22"
+output: html_document
+---
+```{r}
+#  The following analyses were carried out using R version 4.3.3
+
+#### Install Libraries (Un-Comment Each Line if Using Package for First Time) ####
+#install.packages("ggplot2")
+#install.packages("readr")
+#install.packages("did")
+#install.packages("bacondecomp")
+#install.packages("dplyr")
+#install.packages("readxl")
+#install.packages("fixest")
+# install.packages("DIDmultiplegt", force = TRUE)
+#install.packages("ggthemes")
+#install.packages("stargazer")
+#install.packages("gridExtra")
+#install.packages("PanelMatch")
+#install.packages("reshape2")
+#install.packages("plm")
+#install.packages("ggnewscale")
+#install.packages("gtsummary")
+#install.packages("gt")
+#install.packages("lemon")
+#install.packages("ggpattern")
+#install.packages("plotrix")
+#install.packages("grid")
+#install.packages("gridtext")
+#install.packages("tidyverse")
+#install.packages("ggpubr")
+#install.packages("Matching")
+#install.packages("ebal")
+#install.packages("webshot2")
+#install.packages("Kendall")
+#install.packages("gtExtras")
+
+#### Load Libraries ####
+#rm(list=ls(all=TRUE)) 
+'%!in%' <- function(x,y)!('%in%'(x,y))
+```
+
+
+```{r}
+# Load Libraries
+library(ggplot2)
+library(readr)
+library(did)
+library(bacondecomp)
+library(dplyr)
+library(readxl)
+library(fixest)
+# library(DIDmultiplegt) 
+library(ggthemes)
+library(stargazer)
+library(gridExtra)
+# library(HonestDiD)
+library(PanelMatch)
+library(reshape2)
+library(plm)
+library(ggnewscale)
+library(gtsummary)
+library(gt)
+library(lemon)
+library(ggpattern)
+library(plotrix)
+library(grid)
+library(gridtext)
+library(tidyverse)
+library(ggpubr)
+library(Matching)
+library(ebal)
+library(webshot2)
+library(Kendall)
+library(gtExtras)
+theme_set(theme_pubr())
+```
+
+
+```{r}
+# Load Color pallette 
+cbp1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73",
+          "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+```
+
+
+```{r}
+plot_order <- c("treatmentgroup:lead5", "treatmentgroup:lead4", "treatmentgroup:lead3", 
+                "treatmentgroup:lead2", "treatmentgroup:lag0", "treatmentgroup:lag1", 
+                "treatmentgroup:lag2", "treatmentgroup:lag3", "treatmentgroup:lag4", "treatmentgroup:lag5")
+#### Load Data ####
+FinalData <- read.csv("PV1.csv")
+merge_for_match2 <- read.csv("merge_for_match2.csv")
+matches <- read.csv("matches.csv")
+mayordata4 <- read.csv("mayordata4.csv")
+cc_data4 <- read.csv("cc_data4.csv")
+RCVinfo <- read.csv("RCVinfo.csv")
+SE_final <- read_csv("SE_final.csv")
+```
+
+
+```{r}
+#### Figure 1 ####
+
+# Keeps necessary variables and removes duplicates
+PV1 <- data.frame(FinalData[,c("impyearmin","FIPS.Code","treatmentgroup","Year")])
+```
+
+
+```{r}
+PV2 <- PV1 %>%
+  arrange(FIPS.Code, impyearmin) %>%
+  distinct(FIPS.Code, .keep_all = TRUE)
+```
+
+
+```{r}
+# Rearranges data into format conducive for a PanelView Figure
+year <- seq(1995,2022,1)
+panelview <- data.frame(year = year)
+year2 <- c("",1996,"" ,1998,"" ,2000,"" ,2002,"" ,2004,"" ,2006,"" ,2008,"" ,2010, "",2012,"" ,2014,"" ,2016,"" ,2018,"" ,2020,"",2022)
+```
+
+
+```{r}
+# New DF has a column for each city in sample and a row for each year in the dataset
+# replaces 0 with 1 if year is post implementation for RCV city
+for (i in unique(PV2$FIPS.Code)) {
+  panelview[i] <- 0
+  if (PV2$treatmentgroup[PV2$FIPS.Code==i]==1){
+    panelview[panelview$year>=PV2$impyearmin[PV2$FIPS.Code==i],i] <- 1
+  }
+}
+
+# Replaces 0 with 2 if year is not in dataset
+for (i in colnames(panelview)[2:length(colnames(panelview))]) {
+  minyear <- min(PV1$Year[PV1$FIPS.Code==i],na.rm=TRUE)
+  maxyear <- max(PV1$Year[PV1$FIPS.Code==i],na.rm=TRUE)
+  panelview[panelview$year < minyear ,i] <- 2
+  panelview[panelview$year > maxyear ,i] <- 2
+}
+```
+
+
+```{r}
+# Converts dataset from wide to long format
+tvp.may <- melt(panelview,id=c("year"))
+```
+
+
+```{r}
+# Removes rows with missing values
+names_tester <- na.omit(unique(FinalData[,c("FIPS.Code","NAME")]))
+tvp.may2 <- na.omit(merge(tvp.may,names_tester,by.x="variable",by.y="FIPS.Code",all.x=T))
+```
+
+
+```{r}
+cities_to_include <- c("Yonkers, NY","West Valley City, UT","Warwick, RI",
+                       "Taylorsville, UT", "Springville, UT","Comerville, MA",
+                       "Santaquin, UT", "San Bruno, CA", "Roseville, MI","Richmond, UT",
+                       "Portland, ME", "Somerville, MA", "Philadelphia, PA", "Overland Park, KS",
+                       "Newton, UT", "Monument, CO", "Middelton, ID", "Maryland Heights, MO",
+                       "Littleton, CO", "Lebanon, VA", "Kaysville, UT", "Hyrum, California","Hayward, CA",
+                       "Gloucester, MA", "Farmington, UT", "Elko, NV", "Des Moines, IA", "Corvallis, OR",
+                       "Clearfield, UT", "Cary, NC", "Bluffdale, UT", "Belgrade, MT", "Apple Valley, MN",
+                       "Agawan Town, MA", "Middleton, ID", "Hyrum, UT","Gloucester, MA")
+
+tvp.may2$NAME[tvp.may2$NAME=="Yonkers city, New York"] <- "Yonkers, NY"
+tvp.may2$NAME[tvp.may2$NAME=="West Valley City city, Utah"] <- "West Valley City, UT"
+tvp.may2$NAME[tvp.may2$NAME=="Warwick city, Rhode Island"] <- "Warwick, RI"
+tvp.may2$NAME[tvp.may2$NAME=="Taylorsville city, Utah"] <- "Taylorsville, UT"
+tvp.may2$NAME[tvp.may2$NAME=="Springville city, Utah"] <- "Springville, UT"
+tvp.may2$NAME[tvp.may2$NAME=="Comerville city, Massachusetts"] <- "Comerville, MA"
+tvp.may2$NAME[tvp.may2$NAME=="Santaquin city, Utah"] <- "Santaquin, UT"
+tvp.may2$NAME[tvp.may2$NAME=="San Bruno city, California"] <- "San Bruno, CA"
+tvp.may2$NAME[tvp.may2$NAME=="Roseville city, Michigan"] <- "Roseville, MI"
+tvp.may2$NAME[tvp.may2$NAME=="Richmond city, Utah"] <- "Richmond, UT"
+tvp.may2$NAME[tvp.may2$NAME=="Portland city, Cumberland County, Maine"] <- "Portland, ME"
+tvp.may2$NAME[tvp.may2$NAME=="Somerville city, Massachusetts"] <- "Somerville, MA"
+tvp.may2$NAME[tvp.may2$NAME=="Philadelphia city, Pennsylvania"] <- "Philadelphia, PA"
+tvp.may2$NAME[tvp.may2$NAME=="Overland Park city, Kansas"] <- "Overland Park, KS"
+tvp.may2$NAME[tvp.may2$NAME=="Newton town, Utah"] <- "Newton, UT"
+tvp.may2$NAME[tvp.may2$NAME=="Monument town, Colorado"] <- "Monument, CO"
+tvp.may2$NAME[tvp.may2$NAME=="Middelton city, Idaho"] <- "Middelton, ID"
+tvp.may2$NAME[tvp.may2$NAME=="Maryland Heights city, Missouri"] <- "Maryland Heights, MO"
+tvp.may2$NAME[tvp.may2$NAME=="Littleton city, Colorado"] <- "Littleton, CO"
+tvp.may2$NAME[tvp.may2$NAME=="Lebanon town, Virginia"] <- "Lebanon, VA"
+tvp.may2$NAME[tvp.may2$NAME=="Kaysville city, Utah"] <- "Kaysville, UT"
+tvp.may2$NAME[tvp.may2$NAME=="Hyrum city, California"] <- "Hyrum, California"
+tvp.may2$NAME[tvp.may2$NAME=="Hayward city, California"] <- "Hayward, CA"
+tvp.may2$NAME[tvp.may2$NAME=="Gloucester city, Massachusetts"] <- "Gloucester, MA"
+tvp.may2$NAME[tvp.may2$NAME=="Farmington city, Utah"] <- "Farmington, UT"
+tvp.may2$NAME[tvp.may2$NAME=="Elko city, Nevada"] <- "Elko, NV"
+tvp.may2$NAME[tvp.may2$NAME=="Des Moines city, Iowa"] <- "Des Moines, IA"
+tvp.may2$NAME[tvp.may2$NAME=="Corvallis city, Oregon"] <- "Corvallis, OR"
+tvp.may2$NAME[tvp.may2$NAME=="Clearfield city, Utah"] <- "Clearfield, UT"
+tvp.may2$NAME[tvp.may2$NAME=="Cary town, North Carolina"] <- "Cary, NC"
+tvp.may2$NAME[tvp.may2$NAME=="Bluffdale city, Utah"] <- "Bluffdale, UT"
+tvp.may2$NAME[tvp.may2$NAME=="Belgrade city, Montana"] <- "Belgrade, MT"
+tvp.may2$NAME[tvp.may2$NAME=="Apple Valley city, Minnesota"] <- "Apple Valley, MN"
+tvp.may2$NAME[tvp.may2$NAME=="Agawan Town city, Massachusetts"] <- "Agawan Town, MA"
+tvp.may2$NAME[tvp.may2$NAME=="Middleton city, Idaho"] <- "Middleton, ID"
+tvp.may2$NAME[tvp.may2$NAME=="Hyrum city, Utah"] <- "Hyrum, UT"
+```
+
+
+```{r}
+# Generate Figure 1
+figure1 <- ggplot(tvp.may2,aes(x=as.factor(year),y=as.factor(NAME),fill=as.factor(value)))+
+  geom_tile(color="white")+
+  theme(axis.ticks.y = element_blank(),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+        axis.text=element_text(size=12,color="black"))+
+  labs(title="",x="",y="",fill="")+
+  scale_fill_manual(values = c("grey", "black","white"),labels=c("Under control","Under treated","Not in dataset"))+
+  theme(legend.position="bottom", axis.ticks.x = element_blank(),legend.key=element_rect(colour="black",size=1.1))+
+  scale_x_discrete(labels = year2)+
+  scale_y_discrete(breaks=tvp.may2$NAME[tvp.may2$NAME %in% cities_to_include],guide = guide_axis(check.overlap = TRUE))
+figure1
+```
+
+
+```{r}
+# Saves Figure 1
+# ggsave("image/Verification Test/Figure 1.png",width=12,height=12)
+
+#### Table 1 ####
+# Create list of all city ids
+matches <- matches[,-1]
+unique.matches <- unique(unlist(matches))
+# Variables to include in balance test
+allvars <- c("NAME", "Census.ID","year","state","fips2",
+             "pop_tot","white_prop","black_prop","asian_prop","less18","A_18to34","A_35to54","A_55up", 
+             "highsch_less","highsch_grad","som_coll","bachelors","grad_deg","median_inc",
+             "owner_prop","employ_ratio", "female","rcv","missing_inst","Division","unique_id")
+```
+
+
+```{r}
+## Overall Balance: Matched ##
+
+# Pick out the rcv and control rows from merge_for_match2
+merge_for_match3 <- merge_for_match2[merge_for_match2$unique_id %in% unique.matches,] 
+
+# Final matrix
+Balancemat.tot <- merge_for_match3[,allvars]
+
+# Carry out MatchBalance procedure
+set.seed(113)
+s1.mb <- MatchBalance(rcv ~ year+pop_tot+white_prop+black_prop+asian_prop+less18+A_18to34+
+                        A_35to54+A_55up+highsch_less+highsch_grad+som_coll+bachelors+grad_deg+
+                        median_inc+owner_prop+employ_ratio+female+missing_inst+Division,data = Balancemat.tot)
+
+balvars.tot <- c("year","pop_tot","white_prop","black_prop","asian_prop","less18","A_18to34","A_35to54","A_55up", 
+                 "highsch_less","highsch_grad","som_coll","bachelors","grad_deg","median_inc",
+                 "owner_prop","employ_ratio", "female","missing_inst","Division: Middle Atlantic","Division: Mountain",
+                 "Division: New England","Division: Pacific","Division: South Atlantic","Division: West North Central")
+
+s1pre.btest <- baltest.collect(s1.mb,var.names=balvars.tot,after=F)
+s1pre.btest
+```
+
+
+```{r}
+# Convert MatchBalance output into usable table
+s1.balancecompare<-cbind(round(s1pre.btest[,c("mean.Tr","mean.Co","T pval","KS pval")],4))
+
+s1.balancecompare <- as.data.frame(s1.balancecompare)
+colnames(s1.balancecompare) <- c("Matched_mean.Tr","Matched_mean.Co","Matched_T pval","Matched_KS pval")
+s1.balancecompare$row <- row.names(s1.balancecompare)
+
+
+## Overall Balance: Collected ##
+
+merge_for_match5 <- merge_for_match2[merge_for_match2$unique_id %in% unique.matches,] 
+
+merge_for_match6 <- merge_for_match5[merge_for_match5$unique_id %in% FinalData$DemID,]
+
+
+# Final matrix
+Balancemat.col <- merge_for_match6[,allvars]
+
+# Run MatchBalance Procedure
+set.seed(111)
+s1.mb.col <- MatchBalance(rcv ~ year+pop_tot+white_prop+black_prop+asian_prop+less18+A_18to34+
+                            A_35to54+A_55up+highsch_less+highsch_grad+som_coll+bachelors+grad_deg+
+                            median_inc+owner_prop+employ_ratio+female+missing_inst+Division,data = Balancemat.col)
+
+balvars.col <- c("year","pop_tot","white_prop","black_prop","asian_prop","less18","A_18to34","A_35to54","A_55up", 
+                 "highsch_less","highsch_grad","som_coll","bachelors","grad_deg","median_inc",
+                 "owner_prop","employ_ratio", "female","missing_inst","Division: Middle Atlantic","Division: Mountain",
+                 "Division: New England","Division: Pacific","Division: South Atlantic","Division: West North Central")
+
+s1pre.btest.col <- baltest.collect(s1.mb.col,var.names=balvars.col,after=F)
+
+# Convert MatchBalance output into usable table
+s1.balancecompare.col<-cbind(round(s1pre.btest.col[,c("mean.Tr","mean.Co","T pval","KS pval")],3))
+
+s1.balancecompare.col <- as.data.frame(s1.balancecompare.col)
+colnames(s1.balancecompare.col) <- c("Matched_mean.Tr","Matched_mean.Co","Matched_T pval","Matched_KS pval")
+s1.balancecompare.col$row <- row.names(s1.balancecompare.col)
+```
+
+
+```{r}
+## Create Table 1 ##
+
+variable.names <- c("Year","Population","White","Black","Asian",
+                    "18 or less","18 to 34","35 to 54","55 and up",
+                    "No high school degree","High school degree","Some college",
+                    "Bachelors degree","Graduate degree","Median income","Proportion homeowners",
+                    "Employment ratio","Proportion female","Missing from ICMA","Middle atlantic",
+                    "Mountain", "New england","Pacific","South atlantic",
+                    "West north central")
+
+
+colnames1 <- c("Control mean","Treatment mean","P-Value","KS test p-value","Varname")
+colnames2 <- c("Control mean ","Treatment mean ","P-Value ","KS test p-value ","Varname ")
+
+colnames(s1.balancecompare.col) <- colnames2
+colnames(s1.balancecompare) <- colnames1
+s1.balancecompare.col$Variable <- variable.names
+s1.balancecompare$Variable <- variable.names
+
+balance.combined <- cbind(s1.balancecompare,s1.balancecompare.col)
+
+balance.combined 
+# Round the big variables
+
+gt_tbl_all <- gt(balance.combined[,c("Control mean","Treatment mean","KS test p-value","Variable",
+                                     "Control mean ","Treatment mean ","KS test p-value ")]) %>% 
+  cols_move_to_start(columns = Variable) %>%
+  cols_label(Variable = "") %>%
+  tab_spanner(label = "All matched cities",columns = c("Control mean","Treatment mean","KS test p-value")) %>%
+  tab_spanner(label = "Matched cities with non-missing data",columns = c("Control mean ","Treatment mean ","KS test p-value ")) %>%
+  fmt_number(columns = c("Control mean","Treatment mean","Control mean ","Treatment mean "), rows=c(2,15),decimals = 0)%>%
+  fmt_number(columns = c("Control mean","Treatment mean","Control mean ","Treatment mean "), rows=c(3:14,16:25),decimals = 3)%>%
+  fmt_number(columns = c("Control mean","Treatment mean","Control mean ","Treatment mean "), rows=c(1),decimals = 0,use_seps = FALSE)%>%
+  fmt_number(columns = c("KS test p-value","KS test p-value "),rows=c(1:25), decimals = 3)%>%
+  tab_style(
+    style = cell_borders(sides = "right", color = "white", weight = px(20), style = "solid"),
+    locations = cells_body(
+      columns = "KS test p-value")
+  ); gt_tbl_all
+```
+
+
+```{r}
+# Saves the table
+# gtsave(gt_tbl_all,"image/Verification Test/Table 1.tex")
+
+
+#### Figure 2 ####
+# Candidate Number (Mayor)
+# Create model formula that includes leads and lags and control variables
+form_candnum_may <- as.formula(
+  paste("candnum ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+```
+
+
+```{r}
+# Run Model
+model_candnum_may <- feols(form_candnum_may,data=mayordata4); model_candnum_may
+
+# Candidate Number (City Council)
+form_candnum_cc <- as.formula(
+  paste("candnum ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot+districts+`Vote#` | DemID+periodtrial"
+  ),
+)
+
+# Fix naming conventions
+colnames(cc_data4)[which(names(cc_data4) == "Vote.")] <- "Vote#"
+
+# Run Model
+model_candnum_cc <- feols(form_candnum_cc,data=cc_data4); model_candnum_cc
+
+# collect model results into tiblle
+coef_candnum <- tibble(
+  sd = c(summary(model_candnum_may)$se[plot_order],summary(model_candnum_cc)$se[plot_order]),
+  mean = c(coef(model_candnum_may)[plot_order],coef(model_candnum_cc)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City council",10))
+)
+```
+
+
+```{r}
+# Create confidence intervals
+coef_candnum$ymin <- coef_candnum$mean-1.96*coef_candnum$sd
+coef_candnum$ymax <- coef_candnum$mean+1.96*coef_candnum$sd
+
+coef_candnum <- rbind(coef_candnum,list(0,0,-1,"Mayor",0,0))
+coef_candnum <- rbind(coef_candnum,list(0,0,-1,"City council",0,0))
+coef_candnum$depvar <- "# of Candidates"
+```
+
+
+```{r}
+# create figure
+candnum_fig <- coef_candnum %>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  # this creates a red horizontal line
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=6,color="black"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title=element_text(size=9),
+        legend.position="bottom",
+        legend.text=element_text(size=7),
+        legend.title=element_text(size=7))+  # Important to have informative axes labels!
+  ylab("Effect of ranked choice voting") +
+  ylim(-3,13)+
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  scale_x_continuous("Time period",breaks=seq(-5,5,1))+
+  labs(title="")+
+  annotate("text",x=-3.5,y=8,label="Pre ranked choice\nvoting",size=3)+
+  annotate("text",x=2.5,y=8,label="Post ranked choice\nvoting",size=3); candnum_fig
+```
+
+
+```{r}
+# Saves Figure 2
+# ggsave("image/Verification Test/Figure 2.png",width=8,height=4)
+
+#### Figure 3 ####
+# Follows same steps as code for figure 2
+# More5
+form_more5_may <- as.formula(
+  paste("more5 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_more5_may <- feols(form_more5_may,data=mayordata4); summary(model_more5_may)
+
+form_more5_cc <- as.formula(
+  paste("more5 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot+districts+`Vote#` | DemID+periodtrial"
+  ),
+)
+
+model_more5_cc <- feols(form_more5_cc,data=cc_data4); summary(model_more5_cc)
+
+# lwruletot
+form_lwruletot_may <- as.formula(
+  paste("lwruletot ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_lwruletot_may <- feols(form_lwruletot_may,data=mayordata4); summary(model_lwruletot_may)
+
+form_lwruletot_cc <- as.formula(
+  paste("lwruletot ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot+districts+`Vote#` | DemID+periodtrial"
+  ),
+)
+
+model_lwruletot_cc <- feols(form_lwruletot_cc,data=cc_data4); summary(model_lwruletot_cc)
+
+# more5
+coef_more5 <- tibble(
+  sd = c(summary(model_more5_may)$se[plot_order],summary(model_more5_cc)$se[plot_order]),
+  mean = c(coef(model_more5_may)[plot_order],coef(model_more5_cc)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City council",10))
+)
+
+coef_more5$ymin <- coef_more5$mean-1.96*coef_more5$sd
+coef_more5$ymax <- coef_more5$mean+1.96*coef_more5$sd
+
+coef_more5 <- rbind(coef_more5,list(0,0,-1,"Mayor",0,0))
+coef_more5 <- rbind(coef_more5,list(0,0,-1,"City council",0,0))
+coef_more5$depvar <- "More than 5% Vote Share"
+
+# lwruletot
+coef_lwruletot <- tibble(
+  sd = c(summary(model_lwruletot_may)$se[plot_order],summary(model_lwruletot_cc)$se[plot_order]),
+  mean = c(coef(model_lwruletot_may)[plot_order],coef(model_lwruletot_cc)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City council",10))
+)
+
+coef_lwruletot$ymin <- coef_lwruletot$mean-1.96*coef_lwruletot$sd
+coef_lwruletot$ymax <- coef_lwruletot$mean+1.96*coef_lwruletot$sd
+
+coef_lwruletot <- rbind(coef_lwruletot,list(0,0,-1,"Mayor",0,0))
+coef_lwruletot <- rbind(coef_lwruletot,list(0,0,-1,"City council",0,0))
+coef_lwruletot$depvar <- "LW Rule Viable Candidates"
+
+# more5
+more5_fig <- coef_more5 %>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  # this creates a red horizontal line
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=6,color="black"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title=element_text(size=9),
+        legend.position="none",
+        legend.text=element_text(size=7),
+        legend.title=element_text(size=7),
+        plot.title = element_text(size=10))+  # Important to have informative axes labels!
+  ylab("Effect of ranked choice voting") +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  scale_x_continuous("Time period",breaks=seq(-5,5,1))+
+  labs(title="")+
+  ylim(-2,3)+
+  annotate("text",x=-3.5,y=1.6,label="Pre ranked choice\nvoting",size=3)+
+  annotate("text",x=2.5,y=1.6,label="Post ranked choice\nvoting",size=3); more5_fig
+
+# Saves Figure 3a
+# ggsave("image/Verification Test/Figure 3a.png",width=8,height=3.8)
+
+# lwruletot
+lwrule_fig <- coef_lwruletot %>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  # this creates a red horizontal line
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=6,color="black"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title=element_text(size=9),
+        legend.position="bottom",
+        legend.text=element_text(size=7),
+        legend.title=element_text(size=7))+  # Important to have informative axes labels!
+  ylab("Effect of ranked choice voting") +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  scale_x_continuous("Time period",breaks=seq(-5,5,1))+
+  labs(title="")+
+  ylim(-2,3)+
+  geom_vline(xintercept=-1)+
+  annotate("text",x=-3.5,y=0.75,label="Pre ranked choice\nvoting",size=3)+
+  annotate("text",x=2.5,y=0.75,label="Post ranked choice\nvoting",size=3);lwrule_fig
+
+# Saves Figure 3b
+# ggsave("image/Verification Test/Figure 3b.png",width=8,height=4)
+
+#### Table 2 ####
+# create dictionary for etable output
+dict <- c(cgroup1 = "Matched group",periodtrial = "Centered election cycles", period2yr = "Election cycles",
+          incumbenttot = "Incumbent", intervention = "RCV implementation",treatmentgroup = "RCV cities",
+          candnum = "# of candidates",districtscombo = "At-large and district",districtsdistricts = "District only",
+          "`Vote#`" = "# of seats open",period4yr="Election cycle", votenum="# of seats open", DemID2="City", DemID="City",
+          Variables = "")
+
+# narrow dataset to CA cities (treated and matched to treated)
+CA_rcv <- c("id13627","id16418","id17309","id17397")
+matches.ca <- matches[matches$rcv %in% CA_rcv,]
+ids_to_keep.ca <- unique(data.frame(col =unlist(matches.ca)))
+mayordata5 <- mayordata4[mayordata4$DemID %in% ids_to_keep.ca$col,]
+cc_data5 <- cc_data4[cc_data4$DemID %in% ids_to_keep.ca$col,]
+
+# Run simple two period
+# Fixed Effects Model
+gov.exp.cc <- as.formula(paste("KW_govtot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#`"))
+gov.exp.cc.fe <- feols(gov.exp.cc,data=cc_data5[cc_data5$periodtrial> -2 & cc_data5$periodtrial < 1,]); summary(gov.exp.cc.fe)
+gov.exp.may <- as.formula(paste("KW_govtot ~ intervention*treatmentgroup+incumbenttot"))
+gov.exp.may.fe <- feols(gov.exp.may,data=mayordata5[mayordata5$periodtrial> -2 & mayordata5$periodtrial < 1,]); summary(gov.exp.may.fe)
+
+# Generate table
+# Table with Model
+etable(gov.exp.may.fe,gov.exp.cc.fe, headers =c("Mayor","City council") ,depvar=FALSE,dict=dict,
+       order = c("!$\times$"),se.row = FALSE,
+       tex=TRUE,arraystretch=1.5,digits="r3",
+       drop.section = "stats", style.tex = style.tex("base",var.title = "",model.title="",signif.code = c("\u2020"=0.10,"*"=0.05,"**"=0.01)))
+
+#### Figure 4 ####
+# Follows same steps as code for figure 2
+
+# femprop
+form_femprop1_may <- as.formula(
+  paste("femprop1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_femprop1_may <- feols(form_femprop1_may,data=mayordata4); summary(model_femprop1_may)
+
+form_femprop1_cc <- as.formula(
+  paste("femprop1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot+districts+`Vote#` | DemID+periodtrial"
+  ),
+)
+
+model_femprop1_cc <- feols(form_femprop1_cc,data=cc_data4); summary(model_femprop1_cc)
+
+# nwprop
+form_nwprop1_may <- as.formula(
+  paste("nwprop1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_nwprop1_may <- feols(form_nwprop1_may,data=mayordata4); summary(model_nwprop1_may)
+
+cc_data4$time <- cc_data4$periodtrial
+
+form_nwprop1_cc <- as.formula(
+  paste("nwprop1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot+districts+`Vote#` | DemID+periodtrial"
+  ),
+)
+
+model_nwprop1_cc <- feols(form_nwprop1_cc,data=cc_data4); summary(model_nwprop1_cc)
+
+# femprop 1
+coef_femprop1 <- tibble(
+  sd = c(summary(model_femprop1_may)$se[plot_order],summary(model_femprop1_cc)$se[plot_order]),
+  mean = c(coef(model_femprop1_may)[plot_order],coef(model_femprop1_cc)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City council",10))
+)
+
+coef_femprop1$ymin <- coef_femprop1$mean-1.96*coef_femprop1$sd
+coef_femprop1$ymax <- coef_femprop1$mean+1.96*coef_femprop1$sd
+
+coef_femprop1 <- rbind(coef_femprop1,list(0,0,-1,"Mayor",0,0))
+coef_femprop1 <- rbind(coef_femprop1,list(0,0,-1,"City council",0,0))
+coef_femprop1$depvar <- "Proportion Female Candidates"
+
+# nwprop 1
+coef_nwprop1 <- tibble(
+  sd = c(summary(model_nwprop1_may)$se[plot_order],summary(model_nwprop1_cc)$se[plot_order]),
+  mean = c(coef(model_nwprop1_may)[plot_order],coef(model_nwprop1_cc)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City council",10))
+)
+
+coef_nwprop1$ymin <- coef_nwprop1$mean-1.96*coef_nwprop1$sd
+coef_nwprop1$ymax <- coef_nwprop1$mean+1.96*coef_nwprop1$sd
+
+coef_nwprop1 <- rbind(coef_nwprop1,list(0,0,-1,"Mayor",0,0))
+coef_nwprop1 <- rbind(coef_nwprop1,list(0,0,-1,"City council",0,0))
+coef_nwprop1$depvar <- "Proportion Non-White Candidates"
+
+# femprop 1
+femprop1_fig <- coef_femprop1 %>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  # this creates a red horizontal line
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=6,color="black"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title=element_text(size=9),
+        legend.position="none",
+        legend.text=element_text(size=7),
+        legend.title=element_text(size=7))+  # Important to have informative axes labels!
+  ylab("Effect of ranked choice voting") +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  scale_x_continuous("Time period",breaks=seq(-5,5,1))+
+  labs(title="")+
+  ylim(-2,3)+
+  annotate("text",x=-3.5,y=0.75,label="Pre ranked choice\nvoting",size=3)+
+  annotate("text",x=2.5,y=0.75,label="Post ranked choice\nvoting",size=3); femprop1_fig
+
+# Saves Figure 4a
+# ggsave("image/Verification Test/Figure 4a.png",width=8,height=3.8)
+
+# nwprop 1
+nwprop1_fig <- coef_nwprop1%>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  # this creates a red horizontal line
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=6,color="black"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title=element_text(size=9),
+        legend.position="bottom",
+        legend.text=element_text(size=7),
+        legend.title=element_text(size=7))+  # Important to have informative axes labels!
+  ylab("Effect of ranked choice voting") +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  scale_x_continuous("Time period",breaks=seq(-5,5,1))+
+  labs(title="")+
+  ylim(-2,3)+
+  annotate("text",x=-3.5,y=0.75,label="Pre ranked choice\nvoting",size=3)+
+  annotate("text",x=2.5,y=0.75,label="Post ranked choice\nvoting",size=3); nwprop1_fig
+
+# Saves Figure 4b
+# ggsave("image/Verification Test/Figure 4b.png",width=8,height=4)
+
+#### Figure 5 ####
+
+# identify only rows in dataset to grab from merge_for_match2
+merge_for_match_size <- merge_for_match2[merge_for_match2$unique_id %in% mayordata4$DemID & merge_for_match2$unique_id %in% unique.matches,] 
+Balancemat_size <- merge_for_match_size[,c("Census.ID","pop_tot","year")]
+# merge in demID 
+censusdemidmerge <- unique(mayordata4[,c("DemID","FIPS.Code")])
+
+# Mayor
+# Merge in population to normal analysis dataset
+mayor.balance2 <- left_join(Balancemat_size,censusdemidmerge,by=c("Census.ID"="FIPS.Code"),relationship = "many-to-many")
+
+
+# try with median population as cutoff
+median(mayor.balance2$pop_tot)
+treatedlessthanmed.may <- unique(mayor.balance2$DemID[mayor.balance2$pop_tot<34000])
+treatedmorethanmed.may <- unique(mayor.balance2$DemID[mayor.balance2$pop_tot>34000])
+#Create new dataset for those above and those below the median
+mayordatamedless <- mayordata4[mayordata4$DemID %in% treatedlessthanmed.may,]
+mayordatamedmore <- mayordata4[mayordata4$DemID %in% treatedmorethanmed.may,]
+# Run models
+model_candnum_maymedless <- feols(form_candnum_may,data=mayordatamedless); summary(model_candnum_maymedless)
+model_candnum_maymedmore <- feols(form_candnum_may,data=mayordatamedmore); summary(model_candnum_maymedmore)
+
+# City Council 
+# Same steps as above but for city council
+
+# merge in demID
+censusdemidmerge_cc <- unique(cc_data4[,c("DemID","FIPS.Code")])
+# Merge in population to normal analysis dataset
+cc.balance2 <- left_join(Balancemat_size,censusdemidmerge_cc,by=c("Census.ID"="FIPS.Code"))
+
+# try with median population as cutoff
+median(cc.balance2$pop_tot)
+treatedlessthanmed.cc <- unique(cc.balance2$DemID[cc.balance2$pop_tot<34000])
+treatedmorethanmed.cc <- unique(cc.balance2$DemID[cc.balance2$pop_tot>34000])
+#Create new dataset for those above and those below the median
+ccdatamedless <- cc_data4[cc_data4$DemID %in% treatedlessthanmed.cc,]
+ccdatamedmore <- cc_data4[cc_data4$DemID %in% treatedmorethanmed.cc,]
+# Run models
+model_candnum_ccmedless <- feols(form_candnum_cc,data=ccdatamedless); summary(model_candnum_ccmedless)
+model_candnum_ccmedmore <- feols(form_candnum_cc,data=ccdatamedmore); summary(model_candnum_ccmedmore)
+
+# Collect output for small cities into tibble
+coef_candnum_small <- tibble(
+  sd = c(summary(model_candnum_maymedless)$se[plot_order],summary(model_candnum_ccmedless)$se[plot_order]),
+  mean = c(coef(model_candnum_maymedless)[plot_order],coef(model_candnum_ccmedless)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City council",10))
+)
+
+coef_candnum_small$ymin <- coef_candnum_small$mean-1.96*coef_candnum_small$sd
+coef_candnum_small$ymax <- coef_candnum_small$mean+1.96*coef_candnum_small$sd
+
+coef_candnum_small <- rbind(coef_candnum_small,list(0,0,-1,"Mayor",0,0))
+coef_candnum_small <- rbind(coef_candnum_small,list(0,0,-1,"City council",0,0))
+coef_candnum_small$depvar <- "# of Candidates"
+
+# plot figure
+small_cities <- coef_candnum_small[coef_candnum_small$label > -4,] %>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  # this creates a red horizontal line
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=6,color="black"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title=element_text(size=9),
+        legend.position="none",
+        legend.text=element_text(size=7),
+        legend.title=element_text(size=7))+  # Important to have informative axes labels!
+  ylab("Effect of ranked choice voting") +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  scale_x_continuous("Time period",breaks=seq(-5,5,1))+
+  labs(title="")+
+  ylim(-5,5)+
+  annotate("text",x=-2.5,y=3.75,label="Pre ranked choice\nvoting",size=3)+
+  annotate("text",x=2.5,y=3.75,label="Post ranked choice\nvoting",size=3); small_cities
+
+# Saves Figure 5a
+# ggsave("image/Verification Test/Figure 5a.png",width=8,height=3.8)
+
+# Collect output for large cities into tibble
+coef_candnum_large <- tibble(
+  sd = c(summary(model_candnum_maymedmore)$se[plot_order],summary(model_candnum_ccmedmore)$se[plot_order]),
+  mean = c(coef(model_candnum_maymedmore)[plot_order],coef(model_candnum_ccmedmore)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City council",10))
+)
+
+coef_candnum_large$ymin <- coef_candnum_large$mean-1.96*coef_candnum_large$sd
+coef_candnum_large$ymax <- coef_candnum_large$mean+1.96*coef_candnum_large$sd
+
+coef_candnum_large <- rbind(coef_candnum_large,list(0,0,-1,"Mayor",0,0))
+coef_candnum_large <- rbind(coef_candnum_large,list(0,0,-1,"City council",0,0))
+coef_candnum_large$depvar <- "# of Candidates"
+
+# Generate figure
+large_cities <- coef_candnum_large[coef_candnum_large$label > -4,] %>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  # this creates a red horizontal line
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=6,color="black"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title=element_text(size=9),
+        legend.position="bottom",
+        legend.text=element_text(size=7),
+        legend.title=element_text(size=7))+  # Important to have informative axes labels!
+  ylab("Effect of ranked choice voting") +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  scale_x_continuous("Time period",breaks=seq(-5,5,1))+
+  labs(title="")+
+  annotate("text",x=-2.5,y=12.75,label="Pre ranked choice\nvoting",size=3)+
+  annotate("text",x=2.5,y=12.75,label="Post ranked choice\nvoting",size=3); large_cities
+
+# Saves Figure 5b
+# ggsave("image/Verification Test/Figure 5b.png",width=8,height=4)
+
+
+# combine two figure using ggarrange
+city_size <- ggarrange(
+  small_cities, large_cities, labels = c("", ""),ncol=1,
+  common.legend = TRUE, legend = "bottom"
+); city_size
+
+# Saves Figure 5
+
+# ggsave("image/Verification Test/Figure 5.png",width=8,height=8)
+
+#### Figure 6 ####
+## MAYOR ##
+#merge in the information about rcv cities to the mayoral analysis data
+RCVinfo.mayor <- merge(RCVinfo,unique(mayordata4[,c("DemID","FIPS.Code")]), by.y="FIPS.Code",
+                       by.x="Census.ID",all.x = TRUE,all.y=FALSE)
+
+# merge in the rcvinfo column "mayor" that says whether mayor was switched to rcv or just city council
+matches.mayor <- merge(matches,RCVinfo.mayor[,c("DemID","Mayor")],by.x="rcv",by.y="DemID")
+
+
+# identify cities with one black candidate in election prior to RCV
+rcvreadyforblack.may <- mayordata4$DemID[which(mayordata4$treatmentgroup==1 & mayordata4$periodtrial== -1 & mayordata4$blacktot1==1)]
+
+matches.mayor3 <- matches.mayor[matches.mayor$rcv %in% rcvreadyforblack.may,]
+ids_to_keep_may2 <- unique(data.frame(col =unlist(matches.mayor3)))
+# Generate new dataframe including those cities only
+mayordata9 <- mayordata4[mayordata4$DemID %in% ids_to_keep_may2$col,]
+# run model
+fe_readyblack.may <- feols(form_candnum_may,data=mayordata9); summary(fe_readyblack.may)
+
+# identify cities with one hispanic candidate in election prior to RCV
+rcvreadyforhispanic.may <- mayordata4$DemID[which(mayordata4$treatmentgroup==1 & mayordata4$periodtrial== -1 & mayordata4$hispanictot1==1)]
+
+matches.mayor4 <- matches.mayor[matches.mayor$rcv %in% rcvreadyforhispanic.may,]
+ids_to_keep_may3 <- unique(data.frame(col =unlist(matches.mayor4)))
+# Generate new dataframe including those cities only
+mayordata11 <- mayordata4[mayordata4$DemID %in% ids_to_keep_may3$col,]
+# run model
+fe_readyhispanic.may <- feols(form_candnum_may,data=mayordata11); summary(fe_readyhispanic.may)
+
+## CITY COUNCIL ## 
+#merge in the information about rcv cities to the mayoral analysis data
+RCVinfo.cc <- merge(RCVinfo,unique(cc_data4[,c("DemID","FIPS.Code")]), by.y="FIPS.Code",
+                    by.x="Census.ID",all.x = TRUE,all.y=FALSE)
+
+# merge in the rcvinfo column "city council" that says whether mayor was switched to rcv or just city council
+matches.cc <- merge(matches,RCVinfo.cc[,c("DemID","City.Council")],by.x="rcv",by.y="DemID")
+
+
+# identify cities with one black candidate in election prior to RCV
+rcvreadyforblack.cc <- cc_data4$DemID[which(cc_data4$treatmentgroup==1 & cc_data4$periodtrial== -1 & cc_data4$blacktot1==1)]
+matches.cc3 <- matches.cc[matches.cc$rcv %in% rcvreadyforblack.cc,]
+ids_to_keep_cc2 <- unique(data.frame(col =unlist(matches.cc3)))
+# Generate new dataframe including those cities only
+cc_data9 <- cc_data4[cc_data4$DemID %in% ids_to_keep_cc2$col,]
+# run model
+fe_readyblack.cc <- feols(form_candnum_may,data=cc_data9); summary(fe_readyblack.cc)
+# identify cities with one hispanic candidate in election prior to RCV
+rcvreadyforhispanic.cc <- cc_data4$DemID[which(cc_data4$treatmentgroup==1 & cc_data4$periodtrial== -1 & cc_data4$hispanictot1==1)]
+matches.cc4 <- matches.cc[matches.cc$rcv %in% rcvreadyforhispanic.cc,]
+ids_to_keep_cc3 <- unique(data.frame(col =unlist(matches.cc4)))
+# Generate new dataframe including those cities only
+cc_data11 <- cc_data4[cc_data4$DemID %in% ids_to_keep_cc3$col,]
+# run model
+fe_readyhispanic.cc <- feols(form_candnum_may,data=cc_data11); summary(fe_readyhispanic.cc)
+
+# Collect model output for black coalitions
+coef_readyblack <- tibble(
+  sd = c(summary(fe_readyblack.may)$se[plot_order],summary(fe_readyblack.cc)$se[plot_order]),
+  mean = c(coef(fe_readyblack.may)[plot_order],coef(fe_readyblack.cc)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City council",10))
+)
+
+coef_readyblack$ymin <- coef_readyblack$mean-1.96*coef_readyblack$sd
+coef_readyblack$ymax <- coef_readyblack$mean+1.96*coef_readyblack$sd
+
+coef_readyblack <- rbind(coef_readyblack,list(0,0,-1,"Mayor",0,0))
+coef_readyblack <- rbind(coef_readyblack,list(0,0,-1,"City council",0,0))
+coef_readyblack$depvar <- "# of Candidates"
+
+# generate figure for black coalitions
+ready_black <- coef_readyblack[coef_readyblack$label > -4,] %>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  # this creates a red horizontal line
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=6,color="black"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title=element_text(size=9),
+        legend.position="none",
+        legend.text=element_text(size=7),
+        legend.title=element_text(size=7))+  # Important to have informative axes labels!
+  ylab("Effect of ranked choice voting")+
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  ylim(-10,10)+
+  scale_x_continuous("Time period",breaks=seq(-5,5,1))+
+  annotate("text",x=-2.5,y=7.75,label="Pre ranked choice\nvoting",size=3)+
+  annotate("text",x=2.5,y=7.75,label="Post ranked choice\nvoting",size=3)+
+  labs(title=""); ready_black
+
+# Saves Figure 6a
+# ggsave("image/Verification Test/Figure 6a.png",width=8,height=3.8)
+
+# Collect model output for hispanic coalitions
+coef_readyhispanic <- tibble(
+  sd = c(summary(fe_readyhispanic.may)$se[plot_order],summary(fe_readyhispanic.cc)$se[plot_order]),
+  mean = c(coef(fe_readyhispanic.may)[plot_order],coef(fe_readyhispanic.cc)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City council",10))
+)
+
+coef_readyhispanic$ymin <- coef_readyhispanic$mean-1.96*coef_readyhispanic$sd
+coef_readyhispanic$ymax <- coef_readyhispanic$mean+1.96*coef_readyhispanic$sd
+
+coef_readyhispanic <- rbind(coef_readyhispanic,list(0,0,-1,"Mayor",0,0))
+coef_readyhispanic <- rbind(coef_readyhispanic,list(0,0,-1,"City council",0,0))
+coef_readyhispanic$depvar <- "# of Candidates"
+
+# generate figure for hispanic coalitions
+ready_hispanic <- coef_readyhispanic[coef_readyhispanic$label > -4,] %>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=6,color="black"),
+        axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.title=element_text(size=9),
+        legend.position="bottom",
+        legend.text=element_text(size=7),
+        legend.title=element_text(size=7))+  # Important to have informative axes labels!
+  ylab("Effect of ranked choice voting") +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  ylim(-10,10)+
+  scale_x_continuous("Time period",breaks=seq(-5,5,1))+
+  annotate("text",x=-2.5,y=7.75,label="Pre ranked choice\nvoting",size=3)+
+  annotate("text",x=2.5,y=7.75,label="Post ranked choice\nvoting",size=3)+
+  labs(title=""); ready_hispanic
+# Saves Figure 6b
+# ggsave("image/Verification Test/Figure 6b.png",width=8,height=4)
+
+
+# Collect figures into one figure
+city_coalition <- ggarrange(
+  ready_black, ready_hispanic, labels = c("", ""),ncol=1,
+  common.legend = TRUE, legend = "bottom"
+); city_coalition
+
+# Saves Figure 6
+# ggsave("image/Verification Test/Figure 6.png",width=8,height=8)
+
+#### Stats About Uncontested Elections ####
+
+(length(mayordata4$candnum[mayordata4$candnum==1]) / length(mayordata4$candnum))*100
+(length(cc_data4$candnum[cc_data4$candnum==cc_data4$`Vote#`]) / length(cc_data4$candnum))*100
+(length(cc_data4$candnum[cc_data4$candnum==cc_data4$`Vote#` & cc_data4$incumbenttot==0]) / length(cc_data4$candnum))*100
+
+#### Figure 7 ####
+# Pull survey numbers directly from reports on Minnesota Surveys
+survey_results <- data.frame(percent = c(19,30,44,38,32,26,38,32,26),
+                             Year= c("2009","2013","2017","2009","2013","2017","2009","2013","2017"),
+                             effect = c("Negative","Negative","Negative","Positive","Positive","Positive",
+                                        "Little to none","Little to none","Little to none"))
+survey_results$effect <- ordered(survey_results$effect, levels=c("Positive","Negative","Little to none"))
+survey_results$labels <- c("","","","2009","2013","2017","","","")
+# Generate figure on those survey numbers
+ggplot(survey_results, aes(x=effect,y=percent,fill=Year))+
+  geom_bar(stat="identity", color="black", position=position_dodge())+
+  geom_text(aes(label=labels), position=position_dodge(width=0.9), vjust=-0.25)+
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+        axis.text=element_text(size=9,color="black"),
+        axis.title=element_text(size=9),
+        legend.text=element_text(size=7),
+        legend.title=element_text(size=7))+
+  scale_fill_manual(values=c('black','grey','white'))+
+  labs(title="")+
+  xlab("")+ylab("Percent")
+
+# Saves Figure 7
+# ggsave("image/Verification Test/Figure 7.png",width=8,height=6)
+```
+
+
+```{r}
+#### Appendix Table 1 ####
+# Clean hand collected data on cities implementing RCV
+RCVinfo_table <- RCVinfo
+RCVinfo_table$Mayor[is.na(RCVinfo_table$Mayor)] <- "No"
+RCVinfo_table$City.Council[is.na(RCVinfo_table$City.Council)] <- "No"
+RCVinfo_table$Other.Office[is.na(RCVinfo_table$Other.Office)] <- "No"
+RCVinfo_table$Year.repealed[is.na(RCVinfo_table$Year.repealed)] <- "N/A"
+
+colnames(RCVinfo_table) <- c("X","City","State","Census.ID","year.enacted", "Year Implemented","Currently.in.use",
+                             "Year Repealed","Mayor","City Council","Other Office","Type.or.Election","FY00","mergeyear")
+# Generate table organizing data
+stargazer(RCVinfo_table,summary=F,keep = c("City","State","Year Implemented","Year Repealed","Mayor","City.Council","Other.Office"),
+          digit.separate = 0, type="latex")
+```
+
+
+```{r}
+#### Appendix Tables 2 and 3 ####
+
+# identify the set from each matching strategy
+matches_strat1 <- matches[,c("rcv","strat1con1","strat1con2","strat1con3","strat1con4","strat1con5")]
+matches_strat2 <- matches[,c("rcv","strat2con1","strat2con2","strat2con3","strat2con4","strat2con5")]
+matches_strat3 <- matches[,c("rcv","strat3con1","strat3con2","strat3con3","strat3con4","strat3con5")]
+matches_strat4 <- matches[,c("rcv","strat4con1","strat4con2","strat4con3","strat4con4","strat4con5")]
+
+
+# get list of unique ids for each strategy
+strat1_unique <- unique(data.frame(col =unlist(matches_strat1)))
+strat2_unique <- unique(data.frame(col =unlist(matches_strat2)))
+strat3_unique <- unique(data.frame(col =unlist(matches_strat3)))
+strat4_unique <- unique(data.frame(col =unlist(matches_strat4)))
+
+
+# strategy 1 MatchBalance Process
+merge_for_match.strat1 <- merge_for_match2[merge_for_match2$unique_id %in% strat1_unique$col,] 
+Balancemat.strat1 <- merge_for_match.strat1[,allvars]
+
+set.seed(1000)
+s1.mb.strat1 <- MatchBalance(rcv ~ year+pop_tot+white_prop+black_prop+asian_prop+less18+A_18to34+
+                               A_35to54+A_55up+highsch_less+highsch_grad+som_coll+bachelors+grad_deg+
+                               median_inc+owner_prop+employ_ratio+female+missing_inst+Division,data = Balancemat.strat1)
+
+s1pre.btest.strat1 <- baltest.collect(s1.mb.strat1,var.names=balvars.tot,after=F)
+
+s1.balancecompare.strat1<-cbind(round(s1pre.btest.strat1[,c("mean.Tr","mean.Co","KS pval")],4))
+s1.balancecompare.strat1 <- as.data.frame(s1.balancecompare.strat1)
+colnames(s1.balancecompare.strat1) <- c("Strategy_1_mean.Tr","Strategy_1_mean.Co","Strategy_1_KS pval")
+s1.balancecompare.strat1$row <- row.names(s1.balancecompare.strat1)
+s1.balancecompare.strat1[s1.balancecompare.strat1$row=="pop_tot",1:2] <- round(s1.balancecompare.strat1[s1.balancecompare.strat1$row=="pop_tot",1:2],0)
+
+
+# strategy 2 MatchBalance Process
+merge_for_match.strat2 <- merge_for_match2[merge_for_match2$unique_id %in% strat2_unique$col,] 
+Balancemat.strat2 <- merge_for_match.strat2[,allvars]
+
+set.seed(1001)
+s1.mb.strat2 <- MatchBalance(rcv ~ year+pop_tot+white_prop+black_prop+asian_prop+less18+A_18to34+
+                               A_35to54+A_55up+highsch_less+highsch_grad+som_coll+bachelors+grad_deg+
+                               median_inc+owner_prop+employ_ratio+female+missing_inst+Division,data = Balancemat.strat2)
+
+s1pre.btest.strat2 <- baltest.collect(s1.mb.strat2,var.names=balvars.tot,after=F)
+
+s1.balancecompare.strat2<-cbind(round(s1pre.btest.strat2[,c("mean.Tr","mean.Co","KS pval")],4))
+
+s1.balancecompare.strat2 <- as.data.frame(s1.balancecompare.strat2)
+colnames(s1.balancecompare.strat2) <- c("Strategy_2_mean.Tr","Strategy_2_mean.Co","Strategy_2_KS pval")
+s1.balancecompare.strat2$row <- row.names(s1.balancecompare.strat2)
+s1.balancecompare.strat2[s1.balancecompare.strat2$row=="pop_tot",1:2] <- round(s1.balancecompare.strat2[s1.balancecompare.strat2$row=="pop_tot",1:2],0)
+
+
+# strategy 3 MatchBalance Process
+merge_for_match.strat3 <- merge_for_match2[merge_for_match2$unique_id %in% strat3_unique$col,] 
+Balancemat.strat3 <- merge_for_match.strat3[,allvars]
+
+set.seed(1002)
+s1.mb.strat3 <- MatchBalance(rcv ~ year+pop_tot+white_prop+black_prop+asian_prop+less18+A_18to34+
+                               A_35to54+A_55up+highsch_less+highsch_grad+som_coll+bachelors+grad_deg+
+                               median_inc+owner_prop+employ_ratio+female+missing_inst+Division,data = Balancemat.strat3)
+
+s1pre.btest.strat3 <- baltest.collect(s1.mb.strat3,var.names=balvars.tot,after=F)
+
+s1.balancecompare.strat3<-cbind(round(s1pre.btest.strat3[,c("mean.Tr","mean.Co","KS pval")],4))
+
+s1.balancecompare.strat3 <- as.data.frame(s1.balancecompare.strat3)
+colnames(s1.balancecompare.strat3) <- c("Strategy_3_mean.Tr","Strategy_3_mean.Co","Strategy_3_KS pval")
+s1.balancecompare.strat3$row <- row.names(s1.balancecompare.strat3)
+s1.balancecompare.strat3[s1.balancecompare.strat3$row=="pop_tot",1:2] <- round(s1.balancecompare.strat3[s1.balancecompare.strat3$row=="pop_tot",1:2],0)
+
+
+# strategy 4 MatchBalance Process
+merge_for_match.strat4 <- merge_for_match2[merge_for_match2$unique_id %in% strat4_unique$col,] 
+Balancemat.strat4 <- merge_for_match.strat4[,allvars]
+
+set.seed(1004)
+s1.mb.strat4 <- MatchBalance(rcv ~ year+pop_tot+white_prop+black_prop+asian_prop+less18+A_18to34+
+                               A_35to54+A_55up+highsch_less+highsch_grad+som_coll+bachelors+grad_deg+
+                               median_inc+owner_prop+employ_ratio+female+missing_inst+Division,data = Balancemat.strat4)
+
+s1pre.btest.strat4 <- baltest.collect(s1.mb.strat4,var.names=balvars.tot,after=F)
+
+s1.balancecompare.strat4<-cbind(round(s1pre.btest.strat4[,c("mean.Tr","mean.Co","KS pval")],4))
+
+s1.balancecompare.strat4 <- as.data.frame(s1.balancecompare.strat4)
+colnames(s1.balancecompare.strat4) <- c("Strategy_4_mean.Tr","Strategy_4_mean.Co","Strategy_4_KS pval")
+s1.balancecompare.strat4$row <- row.names(s1.balancecompare.strat4)
+s1.balancecompare.strat4[s1.balancecompare.strat4$row=="pop_tot",1:2] <- round(s1.balancecompare.strat4[s1.balancecompare.strat4$row=="pop_tot",1:2],0)
+
+
+# Generate one table for all strategies
+s1.balancecompare.allstart <- cbind(s1.balancecompare.strat1,s1.balancecompare.strat2,s1.balancecompare.strat3,s1.balancecompare.strat4)
+s1.balancecompare.allstart <- subset(s1.balancecompare.allstart,select = - c(row))
+s1.balancecompare.allstart <- subset(s1.balancecompare.allstart,select = - c(row.1,row.2))
+
+s1.balancecompare.allstart$row <- c("Year","Population","Proportion White","Proportion Black","Proportion Asian",
+                                    "Age: Under 18","Age: 18 to 34","Age: 35 to 54","Age: Over 54","Education: Some High School or Less",
+                                    "Education: High School Grad","Education: Some College","Education: Bachelors Degree",
+                                    "Education: Graduate Degree","Median Income","Proportion Homeowner","Employment Ratio","Proportion Female",
+                                    "Missing Institutional Data","Division: Middle Atlantic","Division: Mountain","Division: New England",
+                                    "Division: Pacific","Division: South Atlantic","Division: West North Central")
+# Split into two data tables, each with balance from two strategies
+gt(data.frame(s1.balancecompare.allstart)[,1:7],rowname_col = "row") %>% 
+  tab_spanner_delim(delim="_")%>%
+  tab_header(title="Matched Balance Test by Strategy")%>%
+  fmt_number(columns = c(1:6),rows=c(1:25), decimals = 4) # %>%
+  # gtsave("image/Verification Test/Appendix Table 2.tex") 
+
+# Uncomment lines to save tables
+
+gt(data.frame(s1.balancecompare.allstart)[,7:13],rowname_col = "row") %>% 
+  tab_spanner_delim(delim="_")%>%
+  tab_header(title="Matched Balance Test by Strategy (Cont.)")%>% 
+  fmt_number(columns = c(1:7),rows=c(1:25), decimals = 4) # %>%
+  # gtsave("image/Verification Test/Appendix Table 3.tex") 
+
+
+#### Appendix Table 4 ####
+# Identify cities in merge for match needed for analysis
+rownames(merge_for_match2) <- merge_for_match2$unique_id
+unique.cities <- merge_for_match2$Census.ID[merge_for_match2$unique_id %in% unique.matches]
+
+# Pick out the rcv and control rows from merge_for_match2
+merge_for_match7 <- merge_for_match2[merge_for_match2$Census.ID %in% unique.cities,] 
+
+# Final matrix
+Balancemat.tot2 <- merge_for_match7[,allvars]
+
+# COunt number of years of data included in dataset
+full <- Balancemat.tot2 %>%
+  group_by(NAME) %>%
+  mutate(count = length(unique(year)))
+
+full <- full[full$count==11,]
+
+complete.cities <- unique(full$Census.ID)
+# Create new dataframe with a column for each demographic variable and a row for each city
+cv.df <- data.frame(matrix(ncol=17,nrow=length(complete.cities)))
+row.names(cv.df) <- complete.cities
+colnames(cv.df) <- colnames(full)[6:22]
+
+# for each demographic variable for each city, calculation the mean coefficient of variation
+for (i in rownames(cv.df)) {
+  for (j in colnames(cv.df)) {
+    vectorpop <- full[full$Census.ID==i,j]
+    cv <- sd(vectorpop[[1]])/mean(vectorpop[[1]])
+    cv.df[rownames(cv.df)==i,j] <- cv
+  }
+}
+
+
+cv.df <- cv.df %>% mutate_all(~ifelse(is.nan(.), NA, .))
+
+# take the mean across cities for each demographic variable and clean dataframe
+mean.cv <- colMeans(cv.df, na.rm = TRUE); mean.cv
+mean(mean.cv)
+mean.cv <- data.frame(mean.cv)
+mean.cv$variable <- c("Population","Proportion White","Proportion Black","Proportion Asian",
+                      "Age: Under 18","Age: 18 to 34","Age: 35 to 54","Age: Over 54","Education: Some High School or Less",
+                      "Education: High School Grad","Education: Some College","Education: Bachelors Degree",
+                      "Education: Graduate Degree","Median Income","Proportion Homeowner","Employment Ratio","Proportion Female")
+
+mean.cv$mean.cv <- round(mean.cv$mean.cv,4)
+mean.cv <- rbind(mean.cv,c("",""))
+
+# Create tables with those mean coefficients of variation and prepare for exporting
+# separate so table can be made with two rows
+part1 <- gt(mean.cv[1:9,],rowname_col = "variable") %>% 
+  tab_spanner_delim(delim="_")%>%
+  cols_label(mean.cv = "")
+
+part2 <- gt(mean.cv[10:18,],rowname_col = "variable") %>% 
+  tab_spanner_delim(delim="_")%>%
+  cols_label(mean.cv = "")
+
+half_table <- cbind(mean.cv[1:9,],mean.cv[10:18,])
+colnames(half_table) <- c("Mean_A","Variable_A","Mean_B","Variable_B")
+
+# Generate final table
+half_table %>% 
+  gt() %>%
+  cols_move_to_start(Variable_A) %>%
+  cols_move_to_end(Mean_B) %>%
+  cols_label(Variable_A="",Mean_A="",Variable_B="",Mean_B="") %>%
+  tab_header("Mean Coefficient of Variation") # %>% 
+  # gtsave("image/Verification Test/Appendix Table 4.tex") 
+# uncomment above lines to save table
+
+#### Appendix Figure 1 ####
+# Convert city id to numeric
+mayordata4$DemID2 <- as.numeric(gsub("[^0-9.-]", "", mayordata4$DemID))
+cc_data4$DemID2 <- as.numeric(gsub("[^0-9.-]", "", cc_data4$DemID))
+
+# Create four year election cycles starting in 1995
+# MAYORS
+mayordata4$period4yr <- NA
+mayordata4$period4yr[mayordata4$Year==2019 | mayordata4$Year==2020 | mayordata4$Year==2021 | mayordata4$Year==2022] <- 7
+mayordata4$period4yr[mayordata4$Year==2015 | mayordata4$Year==2016 | mayordata4$Year==2017 | mayordata4$Year==2018] <- 6
+mayordata4$period4yr[mayordata4$Year==2011 | mayordata4$Year==2012 | mayordata4$Year==2013 | mayordata4$Year==2014] <- 5
+mayordata4$period4yr[mayordata4$Year==2007 | mayordata4$Year==2008 | mayordata4$Year==2009 | mayordata4$Year==2010] <- 4
+mayordata4$period4yr[mayordata4$Year==2003 | mayordata4$Year==2004 | mayordata4$Year==2005 | mayordata4$Year==2006] <- 3
+mayordata4$period4yr[mayordata4$Year==1999 | mayordata4$Year==2000 | mayordata4$Year==2001 | mayordata4$Year==2002] <- 2
+mayordata4$period4yr[mayordata4$Year==1995 | mayordata4$Year==1996 | mayordata4$Year==1997 | mayordata4$Year==1998] <- 1
+
+mayordata4$impperiod4yr <- 0
+mayordata4$impperiod4yr[mayordata4$impyearmin==2004 & mayordata4$treatmentgroup==1] <- 3
+mayordata4$impperiod4yr[mayordata4$impyearmin==2007 & mayordata4$treatmentgroup==1] <- 4
+mayordata4$impperiod4yr[mayordata4$impyearmin==2008 & mayordata4$treatmentgroup==1] <- 4
+mayordata4$impperiod4yr[mayordata4$impyearmin==2009 & mayordata4$treatmentgroup==1] <- 4
+mayordata4$impperiod4yr[mayordata4$impyearmin==2010 & mayordata4$treatmentgroup==1] <- 4
+mayordata4$impperiod4yr[mayordata4$impyearmin==2011 & mayordata4$treatmentgroup==1] <- 5
+mayordata4$impperiod4yr[mayordata4$impyearmin==2018 & mayordata4$treatmentgroup==1] <- 6
+mayordata4$impperiod4yr[mayordata4$impyearmin==2019 & mayordata4$treatmentgroup==1] <- 7
+mayordata4$impperiod4yr[mayordata4$impyearmin==2020 & mayordata4$treatmentgroup==1] <- 7
+mayordata4$impperiod4yr[mayordata4$impyearmin==2021 & mayordata4$treatmentgroup==1] <- 7
+
+# CITY COUNCIL
+cc_data4$period4yr <- NA
+cc_data4$period4yr[cc_data4$Year==2019 | cc_data4$Year==2020 | cc_data4$Year==2021 | cc_data4$Year==2022] <- 7
+cc_data4$period4yr[cc_data4$Year==2015 | cc_data4$Year==2016 | cc_data4$Year==2017 | cc_data4$Year==2018] <- 6
+cc_data4$period4yr[cc_data4$Year==2011 | cc_data4$Year==2012 | cc_data4$Year==2013 | cc_data4$Year==2014] <- 5
+cc_data4$period4yr[cc_data4$Year==2007 | cc_data4$Year==2008 | cc_data4$Year==2009 | cc_data4$Year==2010] <- 4
+cc_data4$period4yr[cc_data4$Year==2003 | cc_data4$Year==2004 | cc_data4$Year==2005 | cc_data4$Year==2006] <- 3
+cc_data4$period4yr[cc_data4$Year==1999 | cc_data4$Year==2000 | cc_data4$Year==2001 | cc_data4$Year==2002] <- 2
+cc_data4$period4yr[cc_data4$Year==1995 | cc_data4$Year==1996 | cc_data4$Year==1997 | cc_data4$Year==1998] <- 1
+
+cc_data4$impperiod4yr <- 0
+cc_data4$impperiod4yr[cc_data4$impyearmin==2004 & cc_data4$treatmentgroup==1] <- 3
+cc_data4$impperiod4yr[cc_data4$impyearmin==2007 & cc_data4$treatmentgroup==1] <- 4
+cc_data4$impperiod4yr[cc_data4$impyearmin==2008 & cc_data4$treatmentgroup==1] <- 4
+cc_data4$impperiod4yr[cc_data4$impyearmin==2009 & cc_data4$treatmentgroup==1] <- 4
+cc_data4$impperiod4yr[cc_data4$impyearmin==2010 & cc_data4$treatmentgroup==1] <- 4
+cc_data4$impperiod4yr[cc_data4$impyearmin==2011 & cc_data4$treatmentgroup==1] <- 5
+cc_data4$impperiod4yr[cc_data4$impyearmin==2018 & cc_data4$treatmentgroup==1] <- 6
+cc_data4$impperiod4yr[cc_data4$impyearmin==2019 & cc_data4$treatmentgroup==1] <- 7
+cc_data4$impperiod4yr[cc_data4$impyearmin==2020 & cc_data4$treatmentgroup==1] <- 7
+cc_data4$impperiod4yr[cc_data4$impyearmin==2021 & cc_data4$treatmentgroup==1] <- 7
+
+# Use Callaway and Sant'Anna did package for Group-Time Average Treatment Effects 
+# candidate number
+# mayor
+out_candnum_may <- att_gt(yname="candnum",
+                          tname="period4yr",
+                          idname="DemID2",
+                          gname="impperiod4yr",
+                          allow_unbalanced_panel = TRUE,
+                          data=mayordata4,
+                          base_period = "varying")
+
+es_candnum_may <- aggte(out_candnum_may, type = "dynamic",na.rm=TRUE)
+group_effects_candnum_may <- aggte(out_candnum_may, type = "group",na.rm=TRUE)
+
+# City Council
+out_candnum_cc <- att_gt(yname="candnum",
+                         tname="period4yr",
+                         idname="DemID2",
+                         gname="impperiod4yr",
+                         allow_unbalanced_panel = TRUE,
+                         data=cc_data4,
+                         base_period = "varying")
+
+es_candnum_cc <- aggte(out_candnum_cc, type = "dynamic",na.rm=TRUE)
+group_effects_candnum_cc <- aggte(out_candnum_cc, type = "group",na.rm=TRUE)
+
+# More5
+# mayor
+out_more5_may <- att_gt(yname="more5",
+                        tname="period4yr",
+                        idname="DemID2",
+                        gname="impperiod4yr",
+                        allow_unbalanced_panel = TRUE,
+                        data=mayordata4,
+                        base_period = "varying")
+
+es_more5_may <- aggte(out_more5_may, type = "dynamic",na.rm=TRUE)
+group_effects_more5_may <- aggte(out_more5_may, type = "group",na.rm=TRUE)
+
+
+# City Council
+out_more5_cc <- att_gt(yname="more5",
+                       tname="period4yr",
+                       idname="DemID2",
+                       gname="impperiod4yr",
+                       allow_unbalanced_panel = TRUE,
+                       data=cc_data4,
+                       base_period = "varying")
+
+es_more5_cc <- aggte(out_more5_cc, type = "dynamic",na.rm=TRUE)
+group_effects_more5_cc <- aggte(out_more5_cc, type = "group",na.rm=TRUE)
+
+
+# lwruletot
+# mayor
+out_lwruletot_may <- att_gt(yname="lwruletot",
+                            tname="period4yr",
+                            idname="DemID2",
+                            gname="impperiod4yr",
+                            allow_unbalanced_panel = TRUE,
+                            data=mayordata4,
+                            base_period = "varying")
+
+es_lwruletot_may <- aggte(out_lwruletot_may, type = "dynamic",na.rm=TRUE)
+group_effects_lwruletot_may <- aggte(out_lwruletot_may, type = "group",na.rm=TRUE)
+
+
+# City Council
+out_lwruletot_cc <- att_gt(yname="lwruletot",
+                           tname="period4yr",
+                           idname="DemID2",
+                           gname="impperiod4yr",
+                           allow_unbalanced_panel = TRUE,
+                           data=cc_data4,
+                           base_period = "varying")
+
+es_lwruletot_cc <- aggte(out_lwruletot_cc, type = "dynamic",na.rm=TRUE)
+group_effects_lwruletot_cc <- aggte(out_lwruletot_cc, type = "group",na.rm=TRUE)
+
+# femprop
+# mayor
+out_femprop_may <- att_gt(yname="femprop1",
+                          tname="period4yr",
+                          idname="DemID2",
+                          gname="impperiod4yr",
+                          allow_unbalanced_panel = TRUE,
+                          data=mayordata4,
+                          base_period = "varying")
+
+es_femprop_may <- aggte(out_femprop_may, type = "dynamic",na.rm=TRUE)
+group_effects_femprop_may <- aggte(out_femprop_may, type = "group",na.rm=TRUE)
+
+
+# City Council
+out_femprop_cc <- att_gt(yname="femprop1",
+                         tname="period4yr",
+                         idname="DemID2",
+                         gname="impperiod4yr",
+                         allow_unbalanced_panel = TRUE,
+                         data=cc_data4,
+                         base_period = "varying")
+
+es_femprop_cc <- aggte(out_femprop_cc, type = "dynamic",na.rm=TRUE)
+group_effects_femprop_cc <- aggte(out_femprop_cc, type = "group",na.rm=TRUE)
+
+# nwprop
+# mayor
+out_nwprop_may <- att_gt(yname="nwprop1",
+                         tname="period4yr",
+                         idname="DemID2",
+                         gname="impperiod4yr",
+                         allow_unbalanced_panel = TRUE,
+                         data=mayordata4,
+                         base_period = "varying")
+
+es_nwprop_may <- aggte(out_nwprop_may, type = "dynamic",na.rm=TRUE)
+group_effects_nwprop_may <- aggte(out_nwprop_may, type = "group",na.rm=TRUE)
+
+
+# City Council
+out_nwprop_cc <- att_gt(yname="nwprop1",
+                        tname="period4yr",
+                        idname="DemID2",
+                        gname="impperiod4yr",
+                        allow_unbalanced_panel = TRUE,
+                        data=cc_data4,
+                        base_period = "varying")
+
+es_nwprop_cc <- aggte(out_nwprop_cc, type = "dynamic",na.rm=TRUE)
+group_effects_nwprop_cc <- aggte(out_nwprop_cc, type = "group",na.rm=TRUE)
+
+# gather the coefficients 
+callaway_coef <- data.frame(type = rep(c("Mayor","City Council"),5),
+                            dep_var = rep(c("Candidate\n Number","More\n than 5%","LW Rule\n Total",
+                                            "Proportion\n Female","Proportion\n Non-White"),each=2),
+                            coef = c(group_effects_candnum_may$overall.att,group_effects_candnum_cc$overall.att,
+                                     group_effects_more5_may$overall.att,group_effects_more5_cc$overall.att,
+                                     group_effects_lwruletot_may$overall.att,group_effects_lwruletot_cc$overall.att,
+                                     group_effects_femprop_may$overall.att,group_effects_femprop_cc$overall.att,
+                                     group_effects_nwprop_may$overall.att,group_effects_nwprop_cc$overall.att),
+                            se = c(group_effects_candnum_may$overall.se,group_effects_candnum_cc$overall.se,
+                                   group_effects_more5_may$overall.se,group_effects_more5_cc$overall.se,
+                                   group_effects_lwruletot_may$overall.se,group_effects_lwruletot_cc$overall.se,
+                                   group_effects_femprop_may$overall.se,group_effects_femprop_cc$overall.se,
+                                   group_effects_nwprop_may$overall.se,group_effects_nwprop_cc$overall.se))
+# Create confidence itervals
+callaway_coef$lb <- callaway_coef$coef-(1.96*callaway_coef$se)
+callaway_coef$ub <- callaway_coef$coef+(1.96*callaway_coef$se)
+
+callaway_coef$lb_90 <- callaway_coef$coef-(1.645*callaway_coef$se)
+callaway_coef$ub_90 <- callaway_coef$coef+(1.645*callaway_coef$se)
+# create figure
+ggplot()+
+  geom_pointrange(data=callaway_coef,aes(x=dep_var,y=coef,group=type,ymin=lb,
+                                         ymax=ub,shape=type,linetype=type),
+                  position = position_dodge(width = .5))+
+  labs(x="",y="Aggregate Group-Time ATE",group="Type",linetype="Type",shape="Type")+ theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=8,color="black"),
+        legend.key.size = unit(2, 'cm'),
+        legend.key.height = unit(1, 'cm'), #change legend key height
+        legend.key.width = unit(1, 'cm'), #change legend key width
+        legend.title = element_text(size=14), #change legend title font size
+        legend.text = element_text(size=10))+
+  geom_hline(yintercept=0,linetype="dashed",size=1) # Important to have informative axes labels!
+
+# Saves appendix figure 1
+# ggsave("image/Verification Test/Appendix Figure 1.png",width=8,height=6)
+
+
+#### Appendix Table 5 ####
+# Focus on cities with two year mayoral terms (required for Sunab package)
+mayordata2yrtrm <- mayordata4[mayordata4$MyrTermLngth==2,]
+mayordata2yrtrm2 <- mayordata2yrtrm[mayordata2yrtrm$MyrChangedSys=="No",]
+mayordata2yrtrm3 <- mayordata2yrtrm2[which(mayordata2yrtrm2$periodtrial==1 | mayordata2yrtrm2$periodtrial==2),]
+mayordata2yrtrm4 <- mayordata2yrtrm3[which(mayordata2yrtrm3$DemID!="id21106"),]
+
+cc_data4$votenum <- cc_data4$`Vote#`
+
+# Use sunab package to implement staggered dif in dif estimations
+# candnum
+sunab_may_candnum <- feols(candnum ~ sunab(impperiod4yr,period4yr)+incumbenttot|DemID2 + Year,mayordata4)
+
+sunab_cc_candnum <- feols(candnum ~ sunab(impperiod4yr,period4yr)+incumbenttot+districts+votenum|DemID2 + Year,cc_data4)
+
+# more5
+sunab_may_more5 <- feols(more5 ~ sunab(impperiod4yr,period4yr)+incumbenttot|DemID2 + Year,mayordata4)
+
+sunab_cc_more5 <- feols(more5 ~ sunab(impperiod4yr,period4yr)+incumbenttot+districts+votenum|DemID2 + Year,cc_data4)
+
+# lwruletot
+sunab_may_lwruletot <- feols(lwruletot ~ sunab(impperiod4yr,period4yr)+incumbenttot|DemID2 + Year,mayordata4)
+
+sunab_cc_lwruletot <- feols(lwruletot ~ sunab(impperiod4yr,period4yr)+incumbenttot+districts+votenum|DemID2 + Year,cc_data4)
+
+# femprop1
+sunab_may_femprop1 <- feols(femprop1 ~ sunab(impperiod4yr,period4yr)+incumbenttot|DemID2 + Year,mayordata4)
+
+sunab_cc_femprop1 <- feols(femprop1 ~ sunab(impperiod4yr,period4yr)+incumbenttot+districts+votenum|DemID2 + Year,cc_data4)
+
+# nwprop1
+sunab_may_nwprop1 <- feols(nwprop1 ~ sunab(impperiod4yr,period4yr)+incumbenttot|DemID2 + Year,mayordata4)
+
+sunab_cc_nwprop1 <- feols(nwprop1 ~ sunab(impperiod4yr,period4yr)+incumbenttot+districts+votenum|DemID2 + Year,cc_data4)
+
+# generate tables with model outputs
+etable(sunab_may_candnum,sunab_may_more5,sunab_may_lwruletot,sunab_may_femprop1,sunab_may_nwprop1,
+       headers =list(c("Mayor","Mayor","Mayor","Mayor","Mayor"),
+                     c("Candidate\nNumber","More\nthan 5%","LW Rule\nTotal","Proportion\nFemale","Proportion\nNon-White")),
+       depvar=FALSE,dict=dict,
+       order = c("RCV Implementation","RCV Cities","Incumbent"),se.row = FALSE,
+       tex=TRUE,arraystretch=1.5, signif.code = c("***"=0.001, "**"=0.01, "*"=0.05, "."=0.10),
+       drop.section = "stats")
+
+etable(sunab_cc_candnum,sunab_cc_more5,sunab_cc_lwruletot,sunab_cc_femprop1,sunab_cc_nwprop1,
+       headers =list(c("City Council","City Council","City Council","City Council","City Council"),
+                     c("Candidate\nNumber","More\nthan 5%","LW Rule\nTotal","Proportion\nFemale","Proportion\nNon-White")),
+       depvar=FALSE,dict=dict,
+       order = c("RCV Implementation","RCV Cities","Incumbent"),se.row = FALSE,
+       tex=TRUE,arraystretch=1.5, signif.code = c("***"=0.001, "**"=0.01, "*"=0.05, "."=0.10),
+       drop.section = "stats")
+#### Appendix Table 6 ####
+# Run models on total number of female and non-white candidates
+form_femtot <- as.formula(
+  paste("femaletot1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+
+form_nwtot <- as.formula(
+  paste("nonwhitetot1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+femaletot.may.fe <- feols(form_femtot,data=mayordata4); summary(femaletot.may.fe)
+femaletot.cc.fe <- feols(form_femtot,data=cc_data4); summary(femaletot.cc.fe)
+
+nonwhitetot.may.fe <- feols(form_nwtot,data=mayordata4); summary(nonwhitetot.may.fe)
+nonwhitetot.cc.fe <- feols(form_nwtot,data=cc_data4); summary(nonwhitetot.cc.fe)
+
+# Table with Model
+etable(femaletot.may.fe,nonwhitetot.may.fe,femaletot.cc.fe,nonwhitetot.cc.fe, headers =list(c("Mayor","Mayor","City Council", "City Council"),
+                                                                                            c("Female \n Candidates","Non-White \n Candidates",
+                                                                                              "Female \n Candidates","Non-White \n Candidates")),
+       depvar=FALSE,dict=dict,
+       order = c("RCV Implementation x RCV Cities","RCV Implementation","RCV Cities","Incumbent"),se.row = FALSE,
+       tex=TRUE,arraystretch=1.5, signif.code = c("***"=0.001, "**"=0.01, "*"=0.05, "."=0.10),
+       drop.section = "stats")
+
+#### Appendix Table 7 ####
+
+# Run model with effective number of candidates as measure of viability
+# effN
+form_effN_may <- as.formula(
+  paste("effN ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_effN_may <- feols(form_effN_may,data=mayordata4); summary(model_effN_may)
+
+form_effN_cc <- as.formula(
+  paste("effN ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot+districts+`Vote#` | DemID+periodtrial"
+  ),
+)
+
+model_effN_cc <- feols(form_effN_cc,data=cc_data4); summary(model_effN_cc)
+
+# Table with Model
+etable(model_effN_may,model_effN_cc, headers =c("Mayor","City Council"),depvar=FALSE,dict=dict,
+       order = c("RCV Implementation x RCV Cities","RCV Implementation","RCV Cities","Incumbent"),se.row = FALSE, signif.code = c("***"=0.001, "**"=0.01, "*"=0.05, "."=0.10),drop.section = "stats",
+       tex=TRUE,arraystretch=1.5)
+
+
+#### Appendix Table 8 ####
+
+# nwprop alternative predictor
+form_nwprop2_may <- as.formula(
+  paste("nwprop2 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_nwprop2_may <- feols(form_nwprop2_may,data=mayordata4); summary(model_nwprop2_may)
+
+
+form_nwprop2_cc <- as.formula(
+  paste("nwprop2 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot+districts+`Vote#` | DemID+periodtrial"
+  ),
+)
+
+model_nwprop2_cc <- feols(form_nwprop2_cc,data=cc_data4); summary(model_nwprop2_cc)
+
+
+# Average of two measures of nwprop
+mayordata4$nwpropavg <- rowMeans(mayordata4[,c("nwprop1","nwprop2")],na.rm = TRUE)
+cc_data4$nwpropavg <- rowMeans(cc_data4[,c("nwprop1","nwprop2")],na.rm = TRUE)
+
+form_nwpropavg_may <- as.formula(
+  paste("nwpropavg ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_nwpropavg_may <- feols(form_nwpropavg_may,data=mayordata4); summary(model_nwpropavg_may)
+
+
+form_nwpropavg_cc <- as.formula(
+  paste("nwpropavg ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot+districts+`Vote#` | DemID+periodtrial"
+  ),
+)
+
+model_nwpropavg_cc <- feols(form_nwpropavg_cc,data=cc_data4); summary(model_nwpropavg_cc)
+
+# remove black candidates from nwprop due to potential difficulties predicting black candidates by name
+mayordata4$nonwhiteblack_tot <- mayordata4$nonwhitetot1-mayordata4$blacktot1
+mayordata4$nonwhiteblack_prop <- mayordata4$nonwhiteblack_tot/mayordata4$candnum
+cc_data4$nonwhiteblack_tot <- cc_data4$nonwhitetot1-cc_data4$blacktot1
+cc_data4$nonwhiteblack_prop <- cc_data4$nonwhiteblack_tot/cc_data4$candnum
+
+form_nwbprop_may <- as.formula(
+  paste("nonwhiteblack_prop ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_nwbprop_may <- feols(form_nwbprop_may,data=mayordata4); summary(model_nwbprop_may)
+
+
+form_nwbprop_cc <- as.formula(
+  paste("nonwhiteblack_prop ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot+districts+`Vote#` | DemID+periodtrial"
+  ),
+)
+
+model_nwbprop_cc <- feols(form_nwbprop_cc,data=cc_data4); summary(model_nwbprop_cc)
+
+# Table with Model
+etable(model_nwprop2_may,model_nwpropavg_may,model_nwbprop_may,model_nwprop2_cc,model_nwpropavg_cc,model_nwbprop_cc, 
+       headers =list(c("Mayor","Mayor","Mayor","City Council", "City Council", "City Council"),
+                     c("Alternative \n Prediction (WRU)","Average of \n Two Measures", "Hispanic and \n Asian Only", 
+                       "Alternative \n Prediction (WRU)","Average of \n Two Measures", "Hispanic and \n Asian Only")),
+       depvar=FALSE,dict=dict,
+       order = c("RCV Implementation x RCV Cities","RCV Implementation","RCV Cities","Incumbent"),se.row = FALSE,
+       tex=TRUE,arraystretch=1.5, signif.code = c("***"=0.001, "**"=0.01, "*"=0.05, "."=0.10),
+       drop.section = "stats")
+#### Appendix Figure 2 ####
+
+#Candnum
+
+# Mayor
+form_candnum_may_t2 <- as.formula(
+  paste("candnum ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| cgroup1+periodtrial"
+  ),
+)
+xnam.may <- paste("controlgroup_", 1:29, sep="")
+xnam.cc <- paste("controlgroup_", 1:37, sep="")
+
+# Using separate group fixed effects that have some multi-matched controls
+fmla1fe.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | Year +",paste(xnam.may,collapse="+")))
+simple3fe.may <- feols(fmla1fe.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]);summary(simple3fe.may)
+fmla1fe.2.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | periodtrial+",paste(xnam.may,collapse="+")))
+simple3fe.2.may <- feols(fmla1fe.2.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.2.may)
+fmla1fe.3.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | period2yr +",paste(xnam.may,collapse="+")))
+simple3fe.3.may <- feols(fmla1fe.3.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.3.may)
+
+
+# Using first combined group fixed effects that has no multi-matched controls
+fmla1fe.4.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | cgroup1 + Year"))
+simple3fe.4.may <- feols(fmla1fe.4.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.4.may)
+fmla1fe.5.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | cgroup1+ periodtrial"))
+simple3fe.5.may <- feols(fmla1fe.5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.5.may,vcov="cluster")
+fmla1fe.6.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | cgroup1 + period2yr"))
+simple3fe.6.may <- feols(fmla1fe.6.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.6.may)
+
+# Using second combined group fixed effects that has no multi-matched controls
+fmla1fe.7.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot |cgroup2 + Year"))
+simple3fe.7.may <- feols(fmla1fe.7.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.7.may)
+fmla1fe.8.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot |cgroup2+ periodtrial"))
+simple3fe.8.may <- feols(fmla1fe.8.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.8.may)
+fmla1fe.9.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | cgroup2+period2yr"))
+simple3fe.9.may <- feols(fmla1fe.9.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.9.may)
+
+# Using no matching controls
+fmla1fe.10.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | Year"))
+simple3fe.10.may <- feols(fmla1fe.10.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.10.may)
+fmla1fe.11.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | periodtrial"))
+simple3fe.11.may <- feols(fmla1fe.11.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.11.may)
+fmla1fe.12.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | period2yr"))
+simple3fe.12.may <- feols(fmla1fe.12.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.12.may)
+
+# Using no controls
+fmla1fe.13.may <- as.formula(paste("candnum ~ intervention*treatmentgroup | Year+ cgroup1"))
+simple3fe.13.may <- feols(fmla1fe.13.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.10.may)
+fmla1fe.14.may <- as.formula(paste("candnum ~ intervention*treatmentgroup | periodtrial+ cgroup1"))
+simple3fe.14.may <- feols(fmla1fe.14.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.11.may)
+fmla1fe.15.may <- as.formula(paste("candnum ~ intervention*treatmentgroup | period2yr+ cgroup1"))
+simple3fe.15.may <- feols(fmla1fe.15.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.12.may)
+
+
+# City Council
+
+# Using separate group fixed effects that have some multi-matched controls
+fmla1fe.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | Year +",paste(xnam.cc,collapse="+")))
+simple3fe.cc <- feols(fmla1fe.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]);summary(simple3fe.cc)
+fmla1fe.2.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial+",paste(xnam.cc,collapse="+")))
+simple3fe.2.cc <- feols(fmla1fe.2.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.2.cc)
+fmla1fe.3.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | period2yr +",paste(xnam.cc,collapse="+")))
+simple3fe.3.cc <- feols(fmla1fe.3.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.3.cc)
+
+
+# Using first combined group fixed effects that has no multi-matched controls
+fmla1fe.4.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+Year"))
+simple3fe.4.cc <- feols(fmla1fe.4.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.4.cc)
+fmla1fe.5.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial+cgroup1"))
+simple3fe.5.cc <- feols(fmla1fe.5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.5.cc)
+fmla1fe.6.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+period2yr"))
+simple3fe.6.cc <- feols(fmla1fe.6.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.6.cc)
+
+# Using second combined group fixed effects that has no multi-matched controls
+fmla1fe.7.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+Year"))
+simple3fe.7.cc <- feols(fmla1fe.7.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.7.cc)
+fmla1fe.8.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+periodtrial"))
+simple3fe.8.cc <- feols(fmla1fe.8.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.8.cc)
+fmla1fe.9.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+period2yr"))
+simple3fe.9.cc <- feols(fmla1fe.9.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.9.cc)
+
+# Using no matching controls
+fmla1fe.10.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | Year"))
+simple3fe.10.cc <- feols(fmla1fe.10.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.10.cc)
+fmla1fe.11.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial"))
+simple3fe.11.cc <- feols(fmla1fe.11.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.11.cc)
+fmla1fe.12.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | period2yr"))
+simple3fe.12.cc <- feols(fmla1fe.12.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.12.cc)
+
+# Using no controls
+fmla1fe.13.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup | Year+ cgroup1"))
+simple3fe.13.cc <- feols(fmla1fe.13.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.10.cc)
+fmla1fe.14.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup | periodtrial+ cgroup1"))
+simple3fe.14.cc <- feols(fmla1fe.14.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.11.cc)
+fmla1fe.15.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup | period2yr+ cgroup1"))
+simple3fe.15.cc <- feols(fmla1fe.15.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.12.cc)
+
+# CITY FIXED EFFECT
+# Mayor
+fmla1fe.4.candnum.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot |DemID+ Year"))
+simple3fe.4.candnum.may <- feols(fmla1fe.4.candnum.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.4.candnum.may)
+fmla1fe.5.candnum.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | DemID+periodtrial"))
+simple3fe.5.candnum.may <- feols(fmla1fe.5.candnum.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.5.candnum.may)
+fmla1fe.6.candnum.may <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | DemID+period2yr"))
+simple3fe.6.candnum.may <- feols(fmla1fe.6.candnum.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.6.candnum.may)
+
+# City Council
+fmla1fe.4.candnum.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | DemID+Year"))
+simple3fe.4.candnum.cc <- feols(fmla1fe.4.candnum.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.4.candnum.cc)
+fmla1fe.5.candnum.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | DemID+periodtrial"))
+simple3fe.5.candnum.cc <- feols(fmla1fe.5.candnum.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.5.candnum.cc)
+fmla1fe.6.candnum.cc <- as.formula(paste("candnum ~ intervention*treatmentgroup+incumbenttot | DemID+period2yr"))
+simple3fe.6.candnum.cc <- feols(fmla1fe.6.candnum.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.6.candnum.cc)
+
+# coefplot with all 12 on it for mayor and city council
+
+candnum_alt <- data.frame(control_group = rep(rep(c("Non-Unique","Unique\nType 1","Unique\nType 2","No Matched\nGroups","No Controls","City\nFixed Effects"),each=3),2),
+                          time_type = rep(rep(c("Year","Centered Election Cycles","Election Cycles"),6),2),
+                          election = rep(c("Mayor","City Council"),each=18),
+                          effect = c(simple3fe.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.2.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.3.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.4.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.5.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.6.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.7.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.8.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.9.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.10.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.11.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.12.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.13.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.14.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.15.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.4.candnum.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.5.candnum.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.5.candnum.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.2.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.3.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.4.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.5.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.6.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.7.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.8.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.9.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.10.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.11.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.12.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.13.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.14.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.15.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.4.candnum.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.5.candnum.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.5.candnum.cc$coefficients["intervention:treatmentgroup"]),
+                          se = c(simple3fe.may$se["intervention:treatmentgroup"],
+                                 simple3fe.2.may$se["intervention:treatmentgroup"],
+                                 simple3fe.3.may$se["intervention:treatmentgroup"],
+                                 simple3fe.4.may$se["intervention:treatmentgroup"],
+                                 simple3fe.5.may$se["intervention:treatmentgroup"],
+                                 simple3fe.6.may$se["intervention:treatmentgroup"],
+                                 simple3fe.7.may$se["intervention:treatmentgroup"],
+                                 simple3fe.8.may$se["intervention:treatmentgroup"],
+                                 simple3fe.9.may$se["intervention:treatmentgroup"],
+                                 simple3fe.10.may$se["intervention:treatmentgroup"],
+                                 simple3fe.11.may$se["intervention:treatmentgroup"],
+                                 simple3fe.12.may$se["intervention:treatmentgroup"],
+                                 simple3fe.13.may$se["intervention:treatmentgroup"],
+                                 simple3fe.14.may$se["intervention:treatmentgroup"],
+                                 simple3fe.15.may$se["intervention:treatmentgroup"],
+                                 simple3fe.4.candnum.may$se["intervention:treatmentgroup"],
+                                 simple3fe.5.candnum.may$se["intervention:treatmentgroup"],
+                                 simple3fe.5.candnum.may$se["intervention:treatmentgroup"],
+                                 simple3fe.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.2.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.3.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.4.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.5.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.6.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.7.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.8.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.9.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.10.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.11.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.12.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.13.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.14.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.15.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.4.candnum.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.5.candnum.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.5.candnum.cc$se["intervention:treatmentgroup"]))
+
+
+candnum_alt$lb <- candnum_alt$effect-(1.96*candnum_alt$se)
+candnum_alt$ub <- candnum_alt$effect+(1.96*candnum_alt$se)
+
+# create figure
+ggplot()+
+  geom_pointrange(data=candnum_alt,aes(x=control_group,y=effect,group=time_type,ymin=lb,
+                                       ymax=ub,shape=time_type,linetype=time_type),
+                  position = position_dodge(width = .5))+
+  facet_grid(rows=vars(election))+
+  labs(x="",y=" Dif-in-Dif Estimated Effect",group="Type",linetype="Type",shape="Type",title = "")+ theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=8,color="black"),
+        legend.key.size = unit(2, 'cm'),
+        legend.key.height = unit(1, 'cm'), #change legend key height
+        legend.key.width = unit(1, 'cm'), #change legend key width
+        legend.title = element_text(size=14), #change legend title font size
+        legend.text = element_text(size=10))+
+  geom_hline(yintercept=0,linetype="dashed",size=1) # Important to have informative axes labels!
+
+# Saves appendix figure 2
+# ggsave("image/Verification Test/Appendix Figure 2.png",width=8,height=9)
+
+#### Appendix Figure 3 ####
+
+#More5
+
+# Mayor
+form_more5_may_t2 <- as.formula(
+  paste("more5 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| cgroup1+periodtrial"
+  ),
+)
+# Using separate group fixed effects that have some multi-matched controls
+fmla1fe.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | Year +",paste(xnam.may,collapse="+")))
+simple3fe.more5.may <- feols(fmla1fe.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]);summary(simple3fe.more5.may)
+fmla1fe.2.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | periodtrial+",paste(xnam.may,collapse="+")))
+simple3fe.2.more5.may <- feols(fmla1fe.2.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.2.more5.may)
+fmla1fe.3.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | period2yr +",paste(xnam.may,collapse="+")))
+simple3fe.3.more5.may <- feols(fmla1fe.3.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.3.more5.may)
+
+# Using first combined group fixed effects that has no multi-matched controls
+fmla1fe.4.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | cgroup1+Year"))
+simple3fe.4.more5.may <- feols(fmla1fe.4.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.4.more5.may)
+fmla1fe.5.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | cgroup1+ periodtrial"))
+simple3fe.5.more5.may <- feols(fmla1fe.5.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.5.more5.may)
+fmla1fe.6.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | cgroup1+period2yr"))
+simple3fe.6.more5.may <- feols(fmla1fe.6.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.6.more5.may)
+
+# Using second combined group fixed effects that has no multi-matched controls
+fmla1fe.7.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | cgroup2+Year"))
+simple3fe.7.more5.may <- feols(fmla1fe.7.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.7.more5.may)
+fmla1fe.8.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | cgroup2+periodtrial"))
+simple3fe.8.more5.may <- feols(fmla1fe.8.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.8.more5.may)
+fmla1fe.9.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | cgroup2+period2yr"))
+simple3fe.9.more5.may <- feols(fmla1fe.9.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.9.more5.may)
+
+# Using no matching controls
+fmla1fe.10.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | Year"))
+simple3fe.10.more5.may <- feols(fmla1fe.10.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.10.more5.may)
+fmla1fe.11.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | periodtrial"))
+simple3fe.11.more5.may <- feols(fmla1fe.11.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.11.more5.may)
+fmla1fe.12.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | period2yr"))
+simple3fe.12.more5.may <- feols(fmla1fe.12.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.12.more5.may)
+
+# Using no controls
+fmla1fe.13.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup | cgroup1+Year"))
+simple3fe.13.more5.may <- feols(fmla1fe.13.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.10.more5.may)
+fmla1fe.14.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup | cgroup1+periodtrial"))
+simple3fe.14.more5.may <- feols(fmla1fe.14.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.11.more5.may)
+fmla1fe.15.more5.may <- as.formula(paste("more5 ~ intervention*treatmentgroup | cgroup1+period2yr"))
+simple3fe.15.more5.may <- feols(fmla1fe.15.more5.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.12.more5.may)
+
+
+# City Council
+
+# Using separate group fixed effects that have some multi-matched controls
+fmla1fe.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | Year +",paste(xnam.cc,collapse="+")))
+simple3fe.more5.cc <- feols(fmla1fe.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]);summary(simple3fe.more5.cc)
+fmla1fe.2.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial+",paste(xnam.cc,collapse="+")))
+simple3fe.2.more5.cc <- feols(fmla1fe.2.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.2.more5.cc)
+fmla1fe.3.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | period2yr +",paste(xnam.cc,collapse="+")))
+simple3fe.3.more5.cc <- feols(fmla1fe.3.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.3.more5.cc)
+
+
+# Using first combined group fixed effects that has no multi-matched controls
+fmla1fe.4.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+Year"))
+simple3fe.4.more5.cc <- feols(fmla1fe.4.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.4.more5.cc)
+fmla1fe.5.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+ periodtrial"))
+simple3fe.5.more5.cc <- feols(fmla1fe.5.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.5.more5.cc)
+fmla1fe.6.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+period2yr"))
+simple3fe.6.more5.cc <- feols(fmla1fe.6.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.6.more5.cc)
+
+# Using second combined group fixed effects that has no multi-matched controls
+fmla1fe.7.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+Year"))
+simple3fe.7.more5.cc <- feols(fmla1fe.7.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.7.more5.cc)
+fmla1fe.8.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+periodtrial"))
+simple3fe.8.more5.cc <- feols(fmla1fe.8.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.8.more5.cc)
+fmla1fe.9.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+period2yr"))
+simple3fe.9.more5.cc <- feols(fmla1fe.9.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.9.more5.cc)
+
+# Using no matching controls
+fmla1fe.10.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | Year"))
+simple3fe.10.more5.cc <- feols(fmla1fe.10.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.10.more5.cc)
+fmla1fe.11.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial"))
+simple3fe.11.more5.cc <- feols(fmla1fe.11.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.11.more5.cc)
+fmla1fe.12.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | period2yr"))
+simple3fe.12.more5.cc <- feols(fmla1fe.12.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.12.more5.cc)
+
+# Using no controls
+fmla1fe.13.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup | cgroup1+Year"))
+simple3fe.13.more5.cc <- feols(fmla1fe.13.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.10.more5.cc)
+fmla1fe.14.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup | cgroup1+periodtrial"))
+simple3fe.14.more5.cc <- feols(fmla1fe.14.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.11.more5.cc)
+fmla1fe.15.more5.cc <- as.formula(paste("more5 ~ intervention*treatmentgroup | cgroup1+period2yr"))
+simple3fe.15.more5.cc <- feols(fmla1fe.15.more5.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.12.more5.cc)
+
+# CITY FE
+# Mayor
+fmla1fe.4.more5.may.city <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | DemID+Year"))
+simple3fe.4.more5.may.city <- feols(fmla1fe.4.more5.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.4.more5.may.city)
+fmla1fe.5.more5.may.city <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | DemID+periodtrial"))
+simple3fe.5.more5.may.city <- feols(fmla1fe.5.more5.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.5.more5.may.city)
+fmla1fe.6.more5.may.city <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | DemID+period2yr"))
+simple3fe.6.more5.may.city <- feols(fmla1fe.6.more5.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.6.more5.may.city)
+
+
+# City Council
+fmla1fe.4.more5.cc.city <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | DemID+Year"))
+simple3fe.4.more5.cc.city <- feols(fmla1fe.4.more5.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.4.more5.cc.city)
+fmla1fe.5.more5.cc.city <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | DemID+periodtrial"))
+simple3fe.5.more5.cc.city <- feols(fmla1fe.5.more5.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.5.more5.cc.city)
+fmla1fe.6.more5.cc.city <- as.formula(paste("more5 ~ intervention*treatmentgroup+incumbenttot | DemID+period2yr"))
+simple3fe.6.more5.cc.city <- feols(fmla1fe.6.more5.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.6.more5.cc.city)
+
+# Try to make a coefplot with all 12 on it for mayor and city council
+
+more5_alt <- data.frame(control_group = rep(rep(c("Non-Unique","Unique\nType 1","Unique\nType 2","No Matched\nGroups","No Controls","City\nFixed Effects"),each=3),2),
+                        time_type = rep(rep(c("Year","Centered Election Cycles","Election Cycles"),6),2),
+                        election = rep(c("Mayor","City Council"),each=18),
+                        effect = c(simple3fe.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.2.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.3.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.4.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.5.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.6.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.7.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.8.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.9.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.10.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.11.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.12.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.13.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.14.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.15.more5.may$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.4.more5.may.city$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.5.more5.may.city$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.6.more5.may.city$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.2.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.3.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.4.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.5.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.6.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.7.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.8.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.9.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.10.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.11.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.12.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.13.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.14.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.15.more5.cc$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.4.more5.cc.city$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.5.more5.cc.city$coefficients["intervention:treatmentgroup"],
+                                   simple3fe.6.more5.cc.city$coefficients["intervention:treatmentgroup"]),
+                        se = c(simple3fe.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.2.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.3.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.4.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.5.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.6.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.7.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.8.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.9.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.10.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.11.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.12.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.13.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.14.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.15.more5.may$se["intervention:treatmentgroup"],
+                               simple3fe.4.more5.may.city$se["intervention:treatmentgroup"],
+                               simple3fe.5.more5.may.city$se["intervention:treatmentgroup"],
+                               simple3fe.6.more5.may.city$se["intervention:treatmentgroup"],
+                               simple3fe.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.2.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.3.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.4.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.5.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.6.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.7.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.8.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.9.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.10.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.11.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.12.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.13.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.14.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.15.more5.cc$se["intervention:treatmentgroup"],
+                               simple3fe.4.more5.cc.city$se["intervention:treatmentgroup"],
+                               simple3fe.5.more5.cc.city$se["intervention:treatmentgroup"],
+                               simple3fe.6.more5.cc.city$se["intervention:treatmentgroup"]))
+
+
+more5_alt$lb <- more5_alt$effect-(1.96*more5_alt$se)
+more5_alt$ub <- more5_alt$effect+(1.96*more5_alt$se)
+
+
+ggplot()+
+  geom_pointrange(data=more5_alt,aes(x=control_group,y=effect,group=time_type,ymin=lb,
+                                     ymax=ub,shape=time_type,linetype=time_type),
+                  position = position_dodge(width = .5))+
+  facet_grid(rows=vars(election))+
+  labs(x="",y=" Dif-in-Dif Estimated Effect",group="Type",linetype="Type",shape="Type",title = "")+ theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=8,color="black"),
+        legend.key.size = unit(2, 'cm'),
+        legend.key.height = unit(1, 'cm'), #change legend key height
+        legend.key.width = unit(1, 'cm'), #change legend key width
+        legend.title = element_text(size=14), #change legend title font size
+        legend.text = element_text(size=10))+
+  geom_hline(yintercept=0,linetype="dashed",size=1)+
+  ylim(-1,3)# Important to have informative axes labels!
+
+# Saves appendix figure 3
+# ggsave("image/Verification Test/Appendix Figure 3.png",width=8,height=9)
+
+#### Appendix Figure 4 ####
+#lwruletot
+
+# Mayor
+form_lwruletot_may_t2 <- as.formula(
+  paste("lwruletot ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| cgroup1+periodtrial"
+  ),
+)
+# Using separate group fixed effects that have some multi-matched controls
+fmla1fe.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | Year +",paste(xnam.may,collapse="+")))
+simple3fe.lwruletot.may <- feols(fmla1fe.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]);summary(simple3fe.lwruletot.may)
+fmla1fe.2.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | periodtrial+",paste(xnam.may,collapse="+")))
+simple3fe.2.lwruletot.may <- feols(fmla1fe.2.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.2.lwruletot.may)
+fmla1fe.3.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | period2yr +",paste(xnam.may,collapse="+")))
+simple3fe.3.lwruletot.may <- feols(fmla1fe.3.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.3.lwruletot.may)
+
+# Using first combined group fixed effects that has no multi-matched controls
+fmla1fe.4.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | cgroup1+Year"))
+simple3fe.4.lwruletot.may <- feols(fmla1fe.4.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.4.lwruletot.may)
+fmla1fe.5.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | cgroup1+ periodtrial"))
+simple3fe.5.lwruletot.may <- feols(fmla1fe.5.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.5.lwruletot.may,vcov="cluster")
+fmla1fe.6.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | cgroup1+period2yr"))
+simple3fe.6.lwruletot.may <- feols(fmla1fe.6.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.6.lwruletot.may)
+
+# Using second combined group fixed effects that has no multi-matched controls
+fmla1fe.7.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | cgroup2+Year"))
+simple3fe.7.lwruletot.may <- feols(fmla1fe.7.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.7.lwruletot.may)
+fmla1fe.8.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | cgroup2+periodtrial"))
+simple3fe.8.lwruletot.may <- feols(fmla1fe.8.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.8.lwruletot.may)
+fmla1fe.9.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | cgroup2+period2yr"))
+simple3fe.9.lwruletot.may <- feols(fmla1fe.9.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.9.lwruletot.may)
+
+# Using no matching controls
+fmla1fe.10.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | Year"))
+simple3fe.10.lwruletot.may <- feols(fmla1fe.10.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.10.lwruletot.may)
+fmla1fe.11.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | periodtrial"))
+simple3fe.11.lwruletot.may <- feols(fmla1fe.11.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.11.lwruletot.may)
+fmla1fe.12.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | period2yr"))
+simple3fe.12.lwruletot.may <- feols(fmla1fe.12.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.12.lwruletot.may)
+
+# Using no controls
+fmla1fe.13.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup | cgroup1+Year"))
+simple3fe.13.lwruletot.may <- feols(fmla1fe.13.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.10.lwruletot.may)
+fmla1fe.14.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup | cgroup1+periodtrial"))
+simple3fe.14.lwruletot.may <- feols(fmla1fe.14.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.11.lwruletot.may)
+fmla1fe.15.lwruletot.may <- as.formula(paste("lwruletot ~ intervention*treatmentgroup | cgroup1+period2yr"))
+simple3fe.15.lwruletot.may <- feols(fmla1fe.15.lwruletot.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.12.lwruletot.may)
+
+# City Council
+
+# Using separate group fixed effects that have some multi-matched controls
+fmla1fe.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | Year +",paste(xnam.cc,collapse="+")))
+simple3fe.lwruletot.cc <- feols(fmla1fe.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]);summary(simple3fe.lwruletot.cc)
+fmla1fe.2.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial+",paste(xnam.cc,collapse="+")))
+simple3fe.2.lwruletot.cc <- feols(fmla1fe.2.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.2.lwruletot.cc)
+fmla1fe.3.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | period2yr +",paste(xnam.cc,collapse="+")))
+simple3fe.3.lwruletot.cc <- feols(fmla1fe.3.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.3.lwruletot.cc)
+
+# Using first combined group fixed effects that has no multi-matched controls
+fmla1fe.4.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+Year"))
+simple3fe.4.lwruletot.cc <- feols(fmla1fe.4.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.4.lwruletot.cc)
+fmla1fe.5.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+periodtrial"))
+simple3fe.5.lwruletot.cc <- feols(fmla1fe.5.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.5.lwruletot.cc,vcov="cluster")
+fmla1fe.6.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+period2yr"))
+simple3fe.6.lwruletot.cc <- feols(fmla1fe.6.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.6.lwruletot.cc)
+
+# Using second combined group fixed effects that has no multi-matched controls
+fmla1fe.7.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+Year"))
+simple3fe.7.lwruletot.cc <- feols(fmla1fe.7.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.7.lwruletot.cc)
+fmla1fe.8.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+periodtrial"))
+simple3fe.8.lwruletot.cc <- feols(fmla1fe.8.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.8.lwruletot.cc)
+fmla1fe.9.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+period2yr"))
+simple3fe.9.lwruletot.cc <- feols(fmla1fe.9.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.9.lwruletot.cc)
+
+# Using no matching controls
+fmla1fe.10.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | Year"))
+simple3fe.10.lwruletot.cc <- feols(fmla1fe.10.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.10.lwruletot.cc)
+fmla1fe.11.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial"))
+simple3fe.11.lwruletot.cc <- feols(fmla1fe.11.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.11.lwruletot.cc)
+fmla1fe.12.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | period2yr"))
+simple3fe.12.lwruletot.cc <- feols(fmla1fe.12.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.12.lwruletot.cc)
+
+# Using no controls
+fmla1fe.13.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup | cgroup1+Year"))
+simple3fe.13.lwruletot.cc <- feols(fmla1fe.13.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.10.lwruletot.cc)
+fmla1fe.14.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup | cgroup1+periodtrial"))
+simple3fe.14.lwruletot.cc <- feols(fmla1fe.14.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.11.lwruletot.cc)
+fmla1fe.15.lwruletot.cc <- as.formula(paste("lwruletot ~ intervention*treatmentgroup | cgroup1+period2yr"))
+simple3fe.15.lwruletot.cc <- feols(fmla1fe.15.lwruletot.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.12.lwruletot.cc)
+
+# CITY FIXED EFFECTS
+# Mayor
+fmla1fe.4.lwruletot.may.city <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | DemID+Year"))
+simple3fe.4.lwruletot.may.city <- feols(fmla1fe.4.lwruletot.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.4.lwruletot.may.city)
+fmla1fe.5.lwruletot.may.city <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | DemID+periodtrial"))
+simple3fe.5.lwruletot.may.city <- feols(fmla1fe.5.lwruletot.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.5.lwruletot.may.city)
+fmla1fe.6.lwruletot.may.city <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | DemID+period2yr"))
+simple3fe.6.lwruletot.may.city <- feols(fmla1fe.6.lwruletot.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.6.lwruletot.may.city)
+
+
+# City Council
+fmla1fe.4.lwruletot.cc.city <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | DemID+Year"))
+simple3fe.4.lwruletot.cc.city <- feols(fmla1fe.4.lwruletot.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.4.lwruletot.cc.city)
+fmla1fe.5.lwruletot.cc.city <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | DemID+periodtrial"))
+simple3fe.5.lwruletot.cc.city <- feols(fmla1fe.5.lwruletot.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.5.lwruletot.cc.city)
+fmla1fe.6.lwruletot.cc.city <- as.formula(paste("lwruletot ~ intervention*treatmentgroup+incumbenttot | DemID+period2yr"))
+simple3fe.6.lwruletot.cc.city <- feols(fmla1fe.6.lwruletot.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.6.lwruletot.cc.city)
+
+# Try to make a coefplot with all 12 on it for mayor and city council
+
+lwruletot_alt <- data.frame(control_group = rep(rep(c("Non-Unique","Unique\nType 1","Unique\nType 2","No Matched\nGroups","No Controls","City\nFixed Effects"),each=3),2),
+                            time_type = rep(rep(c("Year","Centered Election Cycles","Election Cycles"),6),2),
+                            election = rep(c("Mayor","City Council"),each=18),
+                            effect = c(simple3fe.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.2.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.3.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.4.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.5.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.6.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.7.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.8.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.9.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.10.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.11.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.12.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.13.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.14.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.15.lwruletot.may$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.4.lwruletot.may.city$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.5.lwruletot.may.city$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.6.lwruletot.may.city$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.2.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.3.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.4.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.5.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.6.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.7.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.8.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.9.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.10.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.11.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.12.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.13.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.14.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.15.lwruletot.cc$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.4.lwruletot.cc.city$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.5.lwruletot.cc.city$coefficients["intervention:treatmentgroup"],
+                                       simple3fe.6.lwruletot.cc.city$coefficients["intervention:treatmentgroup"]),
+                            se = c(simple3fe.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.2.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.3.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.4.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.5.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.6.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.7.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.8.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.9.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.10.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.11.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.12.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.13.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.14.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.15.lwruletot.may$se["intervention:treatmentgroup"],
+                                   simple3fe.4.lwruletot.may.city$se["intervention:treatmentgroup"],
+                                   simple3fe.5.lwruletot.may.city$se["intervention:treatmentgroup"],
+                                   simple3fe.6.lwruletot.may.city$se["intervention:treatmentgroup"],
+                                   simple3fe.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.2.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.3.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.4.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.5.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.6.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.7.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.8.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.9.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.10.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.11.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.12.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.13.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.14.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.15.lwruletot.cc$se["intervention:treatmentgroup"],
+                                   simple3fe.4.lwruletot.cc.city$se["intervention:treatmentgroup"],
+                                   simple3fe.5.lwruletot.cc.city$se["intervention:treatmentgroup"],
+                                   simple3fe.6.lwruletot.cc.city$se["intervention:treatmentgroup"]))
+
+
+lwruletot_alt$lb <- lwruletot_alt$effect-(1.96*lwruletot_alt$se)
+lwruletot_alt$ub <- lwruletot_alt$effect+(1.96*lwruletot_alt$se)
+
+
+ggplot()+
+  geom_pointrange(data=lwruletot_alt,aes(x=control_group,y=effect,group=time_type,ymin=lb,
+                                         ymax=ub,shape=time_type,linetype=time_type),
+                  position = position_dodge(width = .5))+
+  facet_grid(rows=vars(election))+
+  labs(x="",y=" Dif-in-Dif Estimated Effect",group="Type",linetype="Type",shape="Type",title = "")+ theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=8,color="black"),
+        legend.key.size = unit(2, 'cm'),
+        legend.key.height = unit(1, 'cm'), #change legend key height
+        legend.key.width = unit(1, 'cm'), #change legend key width
+        legend.title = element_text(size=14), #change legend title font size
+        legend.text = element_text(size=10))+
+  geom_hline(yintercept=0,linetype="dashed",size=1)+
+  ylim(-1,3)# Important to have informative axes labels!
+
+# Saves appendix figure 4
+# ggsave("image/Verification Test/Appendix Figure 4.png",width=8,height=9)
+
+#### Appendix Figure 5 ####
+
+#femprop1
+
+# Mayor
+form_femprop1_may_t2 <- as.formula(
+  paste("femprop1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| cgroup1+periodtrial"
+  ),
+)
+# Using separate group fixed effects that have some multi-matched controls
+fmla1fe.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | Year +",paste(xnam.may,collapse="+")))
+simple3fe.femprop1.may <- feols(fmla1fe.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]);summary(simple3fe.femprop1.may)
+fmla1fe.2.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | periodtrial+",paste(xnam.may,collapse="+")))
+simple3fe.2.femprop1.may <- feols(fmla1fe.2.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.2.femprop1.may)
+fmla1fe.3.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | period2yr +",paste(xnam.may,collapse="+")))
+simple3fe.3.femprop1.may <- feols(fmla1fe.3.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.3.femprop1.may)
+
+# Using first combined group fixed effects that has no multi-matched controls
+fmla1fe.4.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup1+Year"))
+simple3fe.4.femprop1.may <- feols(fmla1fe.4.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.4.femprop1.may)
+fmla1fe.5.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup1+periodtrial"))
+simple3fe.5.femprop1.may <- feols(fmla1fe.5.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.5.femprop1.may)
+fmla1fe.6.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup1+period2yr"))
+simple3fe.6.femprop1.may <- feols(fmla1fe.6.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.6.femprop1.may)
+
+# Using second combined group fixed effects that has no multi-matched controls
+fmla1fe.7.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup2+Year"))
+simple3fe.7.femprop1.may <- feols(fmla1fe.7.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.7.femprop1.may)
+fmla1fe.8.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup2+periodtrial"))
+simple3fe.8.femprop1.may <- feols(fmla1fe.8.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.8.femprop1.may)
+fmla1fe.9.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup2+period2yr"))
+simple3fe.9.femprop1.may <- feols(fmla1fe.9.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.9.femprop1.may)
+
+# Using no matching controls
+fmla1fe.10.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | Year"))
+simple3fe.10.femprop1.may <- feols(fmla1fe.10.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.10.femprop1.may)
+fmla1fe.11.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | periodtrial"))
+simple3fe.11.femprop1.may <- feols(fmla1fe.11.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.11.femprop1.may)
+fmla1fe.12.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | period2yr"))
+simple3fe.12.femprop1.may <- feols(fmla1fe.12.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.12.femprop1.may)
+
+# Using no controls
+fmla1fe.13.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup | cgroup1+Year"))
+simple3fe.13.femprop1.may <- feols(fmla1fe.13.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.10.femprop1.may)
+fmla1fe.14.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup | cgroup1+periodtrial"))
+simple3fe.14.femprop1.may <- feols(fmla1fe.14.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.11.femprop1.may)
+fmla1fe.15.femprop1.may <- as.formula(paste("femprop1 ~ intervention*treatmentgroup | cgroup1+period2yr"))
+simple3fe.15.femprop1.may <- feols(fmla1fe.15.femprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.12.femprop1.may)
+
+# City Council
+
+# Using separate group fixed effects that have some multi-matched controls
+fmla1fe.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | Year +",paste(xnam.cc,collapse="+")))
+simple3fe.femprop1.cc <- feols(fmla1fe.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]);summary(simple3fe.femprop1.cc)
+fmla1fe.2.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial+",paste(xnam.cc,collapse="+")))
+simple3fe.2.femprop1.cc <- feols(fmla1fe.2.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.2.femprop1.cc)
+fmla1fe.3.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | period2yr +",paste(xnam.cc,collapse="+")))
+simple3fe.3.femprop1.cc <- feols(fmla1fe.3.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.3.femprop1.cc)
+
+# Using first combined group fixed effects that has no multi-matched controls
+fmla1fe.4.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+Year"))
+simple3fe.4.femprop1.cc <- feols(fmla1fe.4.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.4.femprop1.cc)
+fmla1fe.5.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+ periodtrial"))
+simple3fe.5.femprop1.cc <- feols(fmla1fe.5.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.5.femprop1.cc)
+fmla1fe.6.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+period2yr"))
+simple3fe.6.femprop1.cc <- feols(fmla1fe.6.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.6.femprop1.cc)
+
+# Using second combined group fixed effects that has no multi-matched controls
+fmla1fe.7.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+Year"))
+simple3fe.7.femprop1.cc <- feols(fmla1fe.7.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.7.femprop1.cc)
+fmla1fe.8.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+periodtrial"))
+simple3fe.8.femprop1.cc <- feols(fmla1fe.8.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.8.femprop1.cc)
+fmla1fe.9.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+period2yr"))
+simple3fe.9.femprop1.cc <- feols(fmla1fe.9.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.9.femprop1.cc)
+
+# Using no matching controls
+fmla1fe.10.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | Year"))
+simple3fe.10.femprop1.cc <- feols(fmla1fe.10.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.10.femprop1.cc)
+fmla1fe.11.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial"))
+simple3fe.11.femprop1.cc <- feols(fmla1fe.11.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.11.femprop1.cc)
+fmla1fe.12.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | period2yr"))
+simple3fe.12.femprop1.cc <- feols(fmla1fe.12.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.12.femprop1.cc)
+
+# Using no controls
+fmla1fe.13.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup | cgroup1+Year"))
+simple3fe.13.femprop1.cc <- feols(fmla1fe.13.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.10.femprop1.cc)
+fmla1fe.14.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup | cgroup1+periodtrial"))
+simple3fe.14.femprop1.cc <- feols(fmla1fe.14.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.11.femprop1.cc)
+fmla1fe.15.femprop1.cc <- as.formula(paste("femprop1 ~ intervention*treatmentgroup | cgroup1+period2yr"))
+simple3fe.15.femprop1.cc <- feols(fmla1fe.15.femprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.12.femprop1.cc)
+
+# CITY FIXED EFFECTS
+# Mayor
+fmla1fe.4.femprop1.may.city <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+Year"))
+simple3fe.4.femprop1.may.city <- feols(fmla1fe.4.femprop1.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.4.femprop1.may.city)
+fmla1fe.5.femprop1.may.city <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+periodtrial"))
+simple3fe.5.femprop1.may.city <- feols(fmla1fe.5.femprop1.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.5.femprop1.may.city)
+fmla1fe.6.femprop1.may.city <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+period2yr"))
+simple3fe.6.femprop1.may.city <- feols(fmla1fe.6.femprop1.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.6.femprop1.may.city)
+
+
+# City Council
+fmla1fe.4.femprop1.cc.city <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+Year"))
+simple3fe.4.femprop1.cc.city <- feols(fmla1fe.4.femprop1.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.4.femprop1.cc.city)
+fmla1fe.5.femprop1.cc.city <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+periodtrial"))
+simple3fe.5.femprop1.cc.city <- feols(fmla1fe.5.femprop1.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.5.femprop1.cc.city)
+fmla1fe.6.femprop1.cc.city <- as.formula(paste("femprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+period2yr"))
+simple3fe.6.femprop1.cc.city <- feols(fmla1fe.6.femprop1.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.6.femprop1.cc.city)
+
+# Try to make a coefplot with all 12 on it for mayor and city council
+
+femprop1_alt <- data.frame(control_group = rep(rep(c("Non-Unique","Unique\nType 1","Unique\nType 2","No Matched\nGroups","No Controls","City\nFixed Effects"),each=3),2),
+                           time_type = rep(rep(c("Year","Centered Election Cycles","Election Cycles"),6),2),
+                           election = rep(c("Mayor","City Council"),each=18),
+                           effect = c(simple3fe.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.2.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.3.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.4.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.5.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.6.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.7.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.8.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.9.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.10.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.11.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.12.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.13.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.14.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.15.femprop1.may$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.4.femprop1.may.city$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.5.femprop1.may.city$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.6.femprop1.may.city$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.2.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.3.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.4.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.5.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.6.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.7.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.8.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.9.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.10.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.11.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.12.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.13.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.14.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.15.femprop1.cc$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.4.femprop1.cc.city$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.5.femprop1.cc.city$coefficients["intervention:treatmentgroup"],
+                                      simple3fe.6.femprop1.cc.city$coefficients["intervention:treatmentgroup"]),
+                           se = c(simple3fe.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.2.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.3.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.4.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.5.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.6.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.7.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.8.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.9.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.10.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.11.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.12.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.13.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.14.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.15.femprop1.may$se["intervention:treatmentgroup"],
+                                  simple3fe.4.femprop1.may.city$se["intervention:treatmentgroup"],
+                                  simple3fe.5.femprop1.may.city$se["intervention:treatmentgroup"],
+                                  simple3fe.6.femprop1.may.city$se["intervention:treatmentgroup"],
+                                  simple3fe.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.2.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.3.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.4.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.5.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.6.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.7.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.8.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.9.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.10.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.11.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.12.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.13.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.14.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.15.femprop1.cc$se["intervention:treatmentgroup"],
+                                  simple3fe.4.femprop1.cc.city$se["intervention:treatmentgroup"],
+                                  simple3fe.5.femprop1.cc.city$se["intervention:treatmentgroup"],
+                                  simple3fe.6.femprop1.cc.city$se["intervention:treatmentgroup"]))
+
+
+femprop1_alt$lb <- femprop1_alt$effect-(1.96*femprop1_alt$se)
+femprop1_alt$ub <- femprop1_alt$effect+(1.96*femprop1_alt$se)
+
+
+ggplot()+
+  geom_pointrange(data=femprop1_alt,aes(x=control_group,y=effect,group=time_type,ymin=lb,
+                                        ymax=ub,shape=time_type,linetype=time_type),
+                  position = position_dodge(width = .5))+
+  facet_grid(rows=vars(election))+
+  labs(x="",y=" Dif-in-Dif Estimated Effect",group="Type",linetype="Type",shape="Type",title = "")+ theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=8,color="black"),
+        legend.key.size = unit(2, 'cm'),
+        legend.key.height = unit(1, 'cm'), #change legend key height
+        legend.key.width = unit(1, 'cm'), #change legend key width
+        legend.title = element_text(size=14), #change legend title font size
+        legend.text = element_text(size=10))+
+  geom_hline(yintercept=0,linetype="dashed",size=1)+
+  ylim(-1,2)# Important to have informative axes labels!
+
+# Saves appendix figure 5
+# ggsave("image/Verification Test/Appendix Figure 5.png",width=8,height=9)
+
+#### Appendix Figure 6 ####
+
+#nwprop1
+
+# Mayor
+form_nwprop1_may_t2 <- as.formula(
+  paste("nwprop1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| cgroup1+periodtrial"
+  ),
+)
+# Using separate group fixed effects that have some multi-matched controls
+fmla1fe.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | Year +",paste(xnam.may,collapse="+")))
+simple3fe.nwprop1.may <- feols(fmla1fe.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]);summary(simple3fe.nwprop1.may)
+fmla1fe.2.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | periodtrial+",paste(xnam.may,collapse="+")))
+simple3fe.2.nwprop1.may <- feols(fmla1fe.2.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.2.nwprop1.may)
+fmla1fe.3.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | period2yr +",paste(xnam.may,collapse="+")))
+simple3fe.3.nwprop1.may <- feols(fmla1fe.3.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.3.nwprop1.may)
+
+# Using first combined group fixed effects that has no multi-matched controls
+fmla1fe.4.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup1+Year"))
+simple3fe.4.nwprop1.may <- feols(fmla1fe.4.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.4.nwprop1.may)
+fmla1fe.5.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup1+ periodtrial"))
+simple3fe.5.nwprop1.may <- feols(fmla1fe.5.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.5.nwprop1.may)
+fmla1fe.6.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup1+period2yr"))
+simple3fe.6.nwprop1.may <- feols(fmla1fe.6.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.6.nwprop1.may)
+
+# Using second combined group fixed effects that has no multi-matched controls
+fmla1fe.7.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup2+Year"))
+simple3fe.7.nwprop1.may <- feols(fmla1fe.7.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.7.nwprop1.may)
+fmla1fe.8.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup2+periodtrial"))
+simple3fe.8.nwprop1.may <- feols(fmla1fe.8.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.8.nwprop1.may)
+fmla1fe.9.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | cgroup2+period2yr"))
+simple3fe.9.nwprop1.may <- feols(fmla1fe.9.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.9.nwprop1.may)
+
+# Using no matching controls
+fmla1fe.10.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | Year"))
+simple3fe.10.nwprop1.may <- feols(fmla1fe.10.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.10.nwprop1.may)
+fmla1fe.11.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | periodtrial"))
+simple3fe.11.nwprop1.may <- feols(fmla1fe.11.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.11.nwprop1.may)
+fmla1fe.12.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | period2yr"))
+simple3fe.12.nwprop1.may <- feols(fmla1fe.12.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.12.nwprop1.may)
+
+# Using no controls
+fmla1fe.13.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup | cgroup1+Year"))
+simple3fe.13.nwprop1.may <- feols(fmla1fe.13.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.10.nwprop1.may)
+fmla1fe.14.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup | cgroup1+periodtrial"))
+simple3fe.14.nwprop1.may <- feols(fmla1fe.14.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.11.nwprop1.may)
+fmla1fe.15.nwprop1.may <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup | cgroup1+period2yr"))
+simple3fe.15.nwprop1.may <- feols(fmla1fe.15.nwprop1.may,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.12.nwprop1.may)
+
+# City Council
+
+# Using separate group fixed effects that have some multi-matched controls
+fmla1fe.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | Year +",paste(xnam.cc,collapse="+")))
+simple3fe.nwprop1.cc <- feols(fmla1fe.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]);summary(simple3fe.nwprop1.cc)
+fmla1fe.2.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial+",paste(xnam.cc,collapse="+")))
+simple3fe.2.nwprop1.cc <- feols(fmla1fe.2.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.2.nwprop1.cc)
+fmla1fe.3.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | period2yr +",paste(xnam.cc,collapse="+")))
+simple3fe.3.nwprop1.cc <- feols(fmla1fe.3.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.3.nwprop1.cc)
+
+# Using first combined group fixed effects that has no multi-matched controls
+fmla1fe.4.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+Year"))
+simple3fe.4.nwprop1.cc <- feols(fmla1fe.4.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.4.nwprop1.cc)
+fmla1fe.5.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+ periodtrial"))
+simple3fe.5.nwprop1.cc <- feols(fmla1fe.5.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.5.nwprop1.cc)
+fmla1fe.6.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup1+period2yr"))
+simple3fe.6.nwprop1.cc <- feols(fmla1fe.6.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.6.nwprop1.cc)
+
+# Using second combined group fixed effects that has no multi-matched controls
+fmla1fe.7.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+Year"))
+simple3fe.7.nwprop1.cc <- feols(fmla1fe.7.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.7.nwprop1.cc)
+fmla1fe.8.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+periodtrial"))
+simple3fe.8.nwprop1.cc <- feols(fmla1fe.8.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.8.nwprop1.cc)
+fmla1fe.9.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | cgroup2+period2yr"))
+simple3fe.9.nwprop1.cc <- feols(fmla1fe.9.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.9.nwprop1.cc)
+
+# Using no matching controls
+fmla1fe.10.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | Year"))
+simple3fe.10.nwprop1.cc <- feols(fmla1fe.10.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.10.nwprop1.cc)
+fmla1fe.11.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | periodtrial"))
+simple3fe.11.nwprop1.cc <- feols(fmla1fe.11.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.11.nwprop1.cc)
+fmla1fe.12.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot+districts+`Vote#` | period2yr"))
+simple3fe.12.nwprop1.cc <- feols(fmla1fe.12.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.12.nwprop1.cc)
+
+# Using no controls
+fmla1fe.13.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup | cgroup1+Year"))
+simple3fe.13.nwprop1.cc <- feols(fmla1fe.13.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.10.nwprop1.cc)
+fmla1fe.14.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup | cgroup1+periodtrial"))
+simple3fe.14.nwprop1.cc <- feols(fmla1fe.14.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.11.nwprop1.cc)
+fmla1fe.15.nwprop1.cc <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup | cgroup1+period2yr"))
+simple3fe.15.nwprop1.cc <- feols(fmla1fe.15.nwprop1.cc,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.12.nwprop1.cc)
+
+# CITY FIXED EFFECTS
+# Mayor
+fmla1fe.4.nwprop1.may.city <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+Year"))
+simple3fe.4.nwprop1.may.city <- feols(fmla1fe.4.nwprop1.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.4.nwprop1.may.city)
+fmla1fe.5.nwprop1.may.city <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+periodtrial"))
+simple3fe.5.nwprop1.may.city <- feols(fmla1fe.5.nwprop1.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.5.nwprop1.may.city)
+fmla1fe.6.nwprop1.may.city <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+period2yr"))
+simple3fe.6.nwprop1.may.city <- feols(fmla1fe.6.nwprop1.may.city,data=mayordata4[mayordata4$periodtrial> -2 & mayordata4$periodtrial < 1,]); summary(simple3fe.6.nwprop1.may.city)
+
+
+# City Council
+fmla1fe.4.nwprop1.cc.city <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+Year"))
+simple3fe.4.nwprop1.cc.city <- feols(fmla1fe.4.nwprop1.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.4.nwprop1.cc.city)
+fmla1fe.5.nwprop1.cc.city <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+periodtrial"))
+simple3fe.5.nwprop1.cc.city <- feols(fmla1fe.5.nwprop1.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.5.nwprop1.cc.city)
+fmla1fe.6.nwprop1.cc.city <- as.formula(paste("nwprop1 ~ intervention*treatmentgroup+incumbenttot | DemID+period2yr"))
+simple3fe.6.nwprop1.cc.city <- feols(fmla1fe.6.nwprop1.cc.city,data=cc_data4[cc_data4$periodtrial> -2 & cc_data4$periodtrial < 1,]); summary(simple3fe.6.nwprop1.cc.city)
+
+# Try to make a coefplot with all 12 on it for mayor and city council
+
+nwprop1_alt <- data.frame(control_group = rep(rep(c("Non-Unique","Unique\nType 1","Unique\nType 2","No Matched\nGroups","No Controls","City\nFixed Effects"),each=3),2),
+                          time_type = rep(rep(c("Year","Centered Election Cycles","Election Cycles"),6),2),
+                          election = rep(c("Mayor","City Council"),each=18),
+                          effect = c(simple3fe.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.2.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.3.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.4.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.5.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.6.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.7.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.8.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.9.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.10.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.11.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.12.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.13.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.14.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.15.nwprop1.may$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.4.nwprop1.may.city$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.5.nwprop1.may.city$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.6.nwprop1.may.city$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.2.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.3.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.4.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.5.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.6.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.7.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.8.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.9.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.10.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.11.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.12.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.13.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.14.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.15.nwprop1.cc$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.4.nwprop1.cc.city$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.5.nwprop1.cc.city$coefficients["intervention:treatmentgroup"],
+                                     simple3fe.6.nwprop1.cc.city$coefficients["intervention:treatmentgroup"]),
+                          se = c(simple3fe.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.2.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.3.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.4.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.5.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.6.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.7.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.8.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.9.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.10.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.11.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.12.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.13.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.14.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.15.nwprop1.may$se["intervention:treatmentgroup"],
+                                 simple3fe.4.nwprop1.may.city$se["intervention:treatmentgroup"],
+                                 simple3fe.5.nwprop1.may.city$se["intervention:treatmentgroup"],
+                                 simple3fe.6.nwprop1.may.city$se["intervention:treatmentgroup"],
+                                 simple3fe.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.2.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.3.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.4.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.5.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.6.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.7.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.8.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.9.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.10.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.11.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.12.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.13.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.14.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.15.nwprop1.cc$se["intervention:treatmentgroup"],
+                                 simple3fe.4.nwprop1.cc.city$se["intervention:treatmentgroup"],
+                                 simple3fe.5.nwprop1.cc.city$se["intervention:treatmentgroup"],
+                                 simple3fe.6.nwprop1.cc.city$se["intervention:treatmentgroup"]))
+
+
+nwprop1_alt$lb <- nwprop1_alt$effect-(1.96*nwprop1_alt$se)
+nwprop1_alt$ub <- nwprop1_alt$effect+(1.96*nwprop1_alt$se)
+
+
+ggplot()+
+  geom_pointrange(data=nwprop1_alt,aes(x=control_group,y=effect,group=time_type,ymin=lb,
+                                       ymax=ub,shape=time_type,linetype=time_type),
+                  position = position_dodge(width = .5))+
+  facet_grid(rows=vars(election))+
+  labs(x="",y=" Dif-in-Dif Estimated Effect",group="Type",linetype="Type",shape="Type",title = "")+ theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=8,color="black"),
+        legend.key.size = unit(2, 'cm'),
+        legend.key.height = unit(1, 'cm'), #change legend key height
+        legend.key.width = unit(1, 'cm'), #change legend key width
+        legend.title = element_text(size=14), #change legend title font size
+        legend.text = element_text(size=10))+
+  geom_hline(yintercept=0,linetype="dashed",size=1)+
+  ylim(-1,2)# Important to have informative axes labels!
+
+# Saves appendix figure 6
+# ggsave("image/Verification Test/Appendix Figure 6.png",width=8,height=9)
+
+#### Appendix Table 9 ####
+# identify cities with primaries
+usedprimaries <- c("id53967","id177188","id177276","id181759","id181770","id132611","id138647","id136044","id7602")
+# remove those cities from dataframe
+mayordata18 <- mayordata4[mayordata4$DemID %!in% usedprimaries,]
+cc_data18 <- cc_data4[cc_data4$DemID %!in% usedprimaries,]
+
+# Run each model on new dataframe
+model_candnum_may_np <- feols(form_candnum_may,data=mayordata18); summary(model_candnum_may_np)
+model_candnum_cc_np <- feols(form_candnum_cc,data=cc_data18); summary(model_candnum_cc_np)
+
+model_more5_may_np <- feols(form_more5_may,data=mayordata18); summary(model_more5_may_np)
+model_more5_cc_np <- feols(form_more5_cc,data=cc_data18); summary(model_more5_cc_np)
+
+model_lwruletot_may_np <- feols(form_lwruletot_may,data=mayordata4); summary(model_lwruletot_may_np)
+model_lwruletot_cc_np <- feols(form_lwruletot_cc,data=cc_data4); summary(model_lwruletot_cc_np)
+
+model_femprop1_may_np <- feols(form_femprop1_may,data=mayordata18); summary(model_femprop1_may_np)
+model_femprop1_cc_np <- feols(form_femprop1_cc,data=cc_data18); summary(model_femprop1_cc_np)
+
+model_nwprop1_may_np <- feols(form_nwprop1_may,data=mayordata18); summary(model_nwprop1_may_np)
+model_nwprop1_cc_np <- feols(form_nwprop1_cc,data=cc_data18); summary(model_nwprop1_cc_np)
+
+
+# Table with Model
+etable(model_candnum_may_np,model_more5_may_np,model_lwruletot_may_np,model_femprop1_may_np,model_nwprop1_may_np,
+       model_candnum_cc_np,model_more5_cc_np,model_lwruletot_cc_np,model_femprop1_cc_np,model_nwprop1_cc_np,
+       headers =list((rep(c("Mayor","City Council"),each=5)),
+                     (rep(c("Candidate Number","More 5%","LW Rule","Proportion \n Female","Proportion \n Non-White"),2))),
+       depvar=FALSE,dict=dict,
+       order = c("RCV Implementation x RCV Cities","RCV Implementation","RCV Cities","Incumbent"),se.row = FALSE, signif.code = c("***"=0.001, "**"=0.01, "*"=0.05, "."=0.10),drop.section = "stats",
+       tex=TRUE,arraystretch=1.5)
+#### Appendix Table 10 ####
+
+# merge in the mayor data for treatment cities only
+mayor_rcv_only <- mayordata4[mayordata4$treatmentgroup==1,]
+mayor_rcv_only$treatmentgroup <- as.factor(mayor_rcv_only$treatmentgroup)
+mayor_rcv_only$RACEID <- as.character(mayor_rcv_only$RACEID)
+# Combine rcv mayor election data with state senate election data 
+SE_final$treatmentgroup <- as.factor(SE_final$treatmentgroup)
+SE_mayor1 <- dplyr::bind_rows(SE_final,mayor_rcv_only)
+
+# merge in the city council data for treatment cities only
+cc_rcv_only <- cc_data4[cc_data4$treatmentgroup==1,]
+cc_rcv_only$treatmentgroup <- as.factor(cc_rcv_only$treatmentgroup)
+cc_rcv_only$RACEID <- as.character(cc_rcv_only$RACEID)
+#Combine rcv city council election data with state senate election data
+SE_final$treatmentgroup <- as.factor(SE_final$treatmentgroup)
+SE_cc1 <- dplyr::bind_rows(SE_final,cc_rcv_only)
+
+
+# Run lead lag models #
+
+# Candidate Number
+form_candnum_may_se <- as.formula(
+  paste("candnum ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_candnum_may_se <- feols(form_candnum_may_se,data=SE_mayor1); summary(model_candnum_may_se)
+
+form_candnum_cc_se <- as.formula(
+  paste("candnum ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot | DemID+periodtrial"
+  ),
+)
+
+model_candnum_cc_se <- feols(form_candnum_cc_se,data=SE_cc1); summary(model_candnum_cc_se)
+
+# More5
+form_more5_may_se <- as.formula(
+  paste("more5 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_more5_may_se <- feols(form_more5_may_se,data=SE_mayor1); summary(model_more5_may_se)
+
+form_more5_cc_se <- as.formula(
+  paste("more5 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot | DemID+periodtrial"
+  ),
+)
+
+model_more5_cc_se <- feols(form_more5_cc_se,data=SE_cc1); summary(model_more5_cc_se)
+
+# lwruletot
+form_lwruletot_may_se <- as.formula(
+  paste("lwruletot ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_lwruletot_may_se <- feols(form_lwruletot_may_se,data=SE_mayor1); summary(model_lwruletot_may_se)
+
+form_lwruletot_cc_se <- as.formula(
+  paste("lwruletot ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot | DemID+periodtrial"
+  ),
+)
+
+model_lwruletot_cc_se <- feols(form_lwruletot_cc_se,data=SE_cc1); summary(model_lwruletot_cc_se)
+
+# femprop
+form_femprop1_may_se <- as.formula(
+  paste("femprop1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_femprop1_may_se <- feols(form_femprop1_may_se,data=SE_mayor1); summary(model_femprop1_may_se)
+
+form_femprop1_cc_se <- as.formula(
+  paste("femprop1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot | DemID+periodtrial"
+  ),
+)
+
+model_femprop1_cc_se <- feols(form_femprop1_cc_se,data=SE_cc1); summary(model_femprop1_cc_se)
+
+# nwprop
+form_nwprop1_may_se <- as.formula(
+  paste("nwprop1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+ incumbenttot| DemID+periodtrial"
+  ),
+)
+
+model_nwprop1_may_se <- feols(form_nwprop1_may_se,data=SE_mayor1); summary(model_nwprop1_may_se)
+
+
+form_nwprop1_cc_se <- as.formula(
+  paste("nwprop1 ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+incumbenttot | DemID+periodtrial"
+  ),
+)
+
+model_nwprop1_cc_se <- feols(form_nwprop1_cc_se,data=SE_cc1); summary(model_nwprop1_cc_se)
+
+# Collect model output in table
+etable(model_candnum_may_se,model_more5_may_se,model_lwruletot_may_se,model_femprop1_may_se,model_nwprop1_may_se,
+       model_candnum_cc_se,model_more5_cc_se,model_lwruletot_cc_se,model_femprop1_cc_se,model_nwprop1_cc_se,
+       headers =list((rep(c("Mayor","City Council"),each=5)),
+                     (rep(c("Candidate Number","More 5%","LW Rule","Proportion \n Female","Proportion \n Non-White"),2))),
+       depvar=FALSE,dict=dict,
+       order = c("RCV Implementation x RCV Cities","RCV Implementation","RCV Cities","Incumbent"),se.row = FALSE, signif.code = c("***"=0.001, "**"=0.01, "*"=0.05, "."=0.10),drop.section = "stats",
+       tex=TRUE,arraystretch=1.5)
+
+
+#### Appendix Figure 7 ####
+# drop minneapolis
+minneapolis <- c("id100284")
+mayordata20 <- mayordata4[mayordata4$DemID %!in% minneapolis,]
+cc_data20 <- cc_data4[cc_data4$DemID %!in% minneapolis,]
+
+# Also drop San Francisco and Oakland
+SF_Oak <- c("id17309","id16418")
+mayordata21 <- mayordata20[mayordata20$DemID %!in% SF_Oak,]
+cc_data21 <- cc_data20[cc_data20$DemID %!in% SF_Oak,]
+
+# Run models
+model_candnum_may_nosfoak <- feols(form_candnum_may,data=mayordata21); summary(model_candnum_may_nosfoak)
+model_candnum_cc_nosfoak <- feols(form_candnum_cc,data=cc_data21); summary(model_candnum_cc_nosfoak)
+
+# Collect model output
+coef_candnum_nosfoak <- tibble(
+  sd = c(summary(model_candnum_may_nosfoak)$se[plot_order],summary(model_candnum_cc_nosfoak)$se[plot_order]),
+  mean = c(coef(model_candnum_may_nosfoak)[plot_order],coef(model_candnum_cc_nosfoak)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City Council",10))
+)
+
+coef_candnum_nosfoak$ymin <- coef_candnum_nosfoak$mean-1.96*coef_candnum_nosfoak$sd
+coef_candnum_nosfoak$ymax <- coef_candnum_nosfoak$mean+1.96*coef_candnum_nosfoak$sd
+
+coef_candnum_nosfoak <- rbind(coef_candnum_nosfoak,list(0,0,-1,"Mayor",0,0))
+coef_candnum_nosfoak <- rbind(coef_candnum_nosfoak,list(0,0,-1,"City Council",0,0))
+coef_candnum_nosfoak$depvar <- "# of Candidates"
+
+# Create figure
+coef_candnum_nosfoak %>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  # this creates a red horizontal line
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=12,color="black"),
+        axis.title=element_text(size=18),
+        legend.position="bottom")+  # Important to have informative axes labels!
+  ylab("Effect of RCV") +
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  ylim(-2,12)+
+  scale_x_continuous("Time Period",breaks=seq(-5,5,1))+
+  annotate("text",x=-3.5,y=4,label="Pre-RCV",size=5)+
+  annotate("text",x=2.5,y=4,label="Post-RCV",size=5)+  # Important to have informative axes labels!
+  geom_hline(yintercept = 0) +
+  labs(title="")
+
+# Saves appendix figure 7
+# ggsave("image/Verification Test/Appendix Figure 7.png",width=8,height=6)
+
+#### Appendix Figure 8 ####
+
+# Generate model formula for incumbent as outcome of interest
+form_incumbent_cc <- as.formula(
+  paste("incumbenttot ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "+districts+`Vote#` | DemID+periodtrial"
+  ),
+)
+# run model for city councils
+model_incumbent_cc <- feols(form_incumbent_cc,data=cc_data4); summary(model_incumbent_cc)
+
+# Generate model formula for incumbent as outcome of interest
+form_incumbent_may <- as.formula(
+  paste("incumbenttot ~ ",
+        paste(
+          paste(paste("treatmentgroup*lead", 2:5, sep = ""), collapse = " + "),
+          paste(paste("treatmentgroup*lag", 0:5, sep = ""), collapse = " + "), sep = " + "),
+        "| DemID+periodtrial"
+  ),
+)
+# run model for mayors
+model_incumbent_may <- feols(form_incumbent_may,data=mayordata4); summary(model_incumbent_may)
+
+# Collect model output in tibble
+coef_incumbent <- tibble(
+  sd = c(summary(model_incumbent_may)$se[plot_order],summary(model_incumbent_cc)$se[plot_order]),
+  mean = c(coef(model_incumbent_may)[plot_order],coef(model_incumbent_cc)[plot_order]),
+  label = c( -5,-4, -3, -2, 0, 1,2,3,4,5, -5,-4, -3, -2, 0, 1,2,3,4,5),
+  Election = c(rep("Mayor",10),rep("City Council",10))
+)
+
+coef_incumbent$ymin <- coef_incumbent$mean-1.96*coef_incumbent$sd
+coef_incumbent$ymax <- coef_incumbent$mean+1.96*coef_incumbent$sd
+
+coef_incumbent <- rbind(coef_incumbent,list(0,0,-1,"Mayor",0,0))
+coef_incumbent <- rbind(coef_incumbent,list(0,0,-1,"City Council",0,0))
+coef_incumbent$depvar <- "# of Incumbents"
+
+# Generate figure
+incumbent_fig <- coef_incumbent %>%
+  ggplot(aes(x = label, y = mean,group=Election)) +
+  # this creates a red horizontal line
+  geom_line(aes(linetype=Election),position = position_dodge(width=0.3)) + 
+  geom_point(aes(shape=Election),position = position_dodge(width=0.3),size=2) +
+  geom_errorbar(aes(linetype=Election,ymin=ymin, ymax=ymax), width=.1,position = position_dodge(width=0.3)) +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text=element_text(size=12,color="black"),
+        axis.title=element_text(size=18),
+        legend.position="bottom")+  # Important to have informative axes labels!
+  ylab("Effect of RCV") +
+  ylim(-3,5)+
+  geom_hline(yintercept = 0) +
+  geom_vline(xintercept=-1)+
+  scale_x_continuous("Time Period",breaks=seq(-5,5,1))+
+  labs(title="")+
+  annotate("text",x=-3.5,y=8,label="Pre-RCV",size=5)+
+  annotate("text",x=2.5,y=8,label="Post-RCV",size=5); incumbent_fig
+
+# Saves appendix figure 8
+# ggsave("image/Verification Test/Appendix Figure 8.png",width=8,height=4)
+
+```
+

@@ -1,0 +1,271 @@
+---
+title: "Matching"
+output:
+  pdf_document:
+    latex_engine: xelatex
+  word_document: default
+mainfont: MalgunGothic
+monofont: MalgunGothic
+---
+
+# 1. 데이터 전처리
+```{r}
+rm(list=ls())
+gc()
+```
+
+```{r}
+library("readxl")
+korea<- read_excel("korea.xlsx")
+korea<-korea[, -c(7,8)]
+japan<- read_excel("japan.xls")
+```
+
+
+```{r}
+kr_jp <- rbind(korea, japan)
+kr_jp$treated<- as.integer(kr_jp$treated)
+kr_jp$pop<- as.integer(kr_jp$pop)
+kr_jp$landarea<- as.integer(kr_jp$landarea)
+
+saveRDS(kr_jp, file = "kr_jp.rds")
+```
+
+
+```{r}
+kr_jp <- readRDS("kr_jp.rds")
+```
+
+
+```{r}
+library(MatchingFrontier)
+kr_jp <- readRDS("kr_jp.rds")
+match.on <- colnames(kr_jp)[!(colnames(kr_jp) %in% c('code', 'name', 'country', 'treated'))]
+match.on
+table(kr_jp$treated)
+mahal.frontier <- makeFrontier(dataset = kr_jp, treatment = 'treated', match.on = match.on)
+
+```
+
+```{r}
+# plot(mahal.frontier)
+```
+
+```{r}
+matched.data_jp <- generateDataset(mahal.frontier, N = 100)
+```
+
+
+
+
+1011 14153 Minami-ku 277280 38 japan 0 35  神奈川県　 相模原市 南区 Sagamiharaminami Police Station https://www.police.pref.kanagawa.jp/ps/78ps/78_idx.htm (약300명, )
+
+https://www.police.pref.kanagawa.jp/ps/78ps/78mes/78mes01_01.htm
+
+사가미하라시 전역을 사가미하라 경찰서가 관할하고 있었습니다만, 오다큐 연선에 공단 주택이 건설된 이래, 연선의 도시화가 진행되어, 인구 및 사건 사고가 급증했습니다. 거기서, 쇼와 49년 8월 1일, 사가미하라 경찰서를 2분할해, 그 남부를 관할하는 사가미하라 남경찰서가 창설되었습니다.
+　2018년 2월 1일 현재에서의 사가미하라 남경찰서관내의 인구는 27만 8,555명으로, 사가미하라시 총인구의 약 39퍼센트 쪽이 거주하고 있습니다.
+　
+　
+35 2632000000 부산광역시 북구 278857 39 korea 1 1011 (483명, 일반직 14, 경찰 469명)
+
+
+# 일본 시도 분석
+
+
+```{r}
+rm(list=ls())
+gc()
+```
+
+```{r}
+library("readxl")
+korea_sido<- read_excel("korea_sido.xlsx")
+japan_sido<- read_excel("japan_sido.xls")
+```
+
+
+```{r}
+kr_jp_sido <- rbind(korea_sido, japan_sido)
+kr_jp_sido$treated<- as.integer(kr_jp_sido$treated)
+kr_jp_sido$pop<- as.integer(kr_jp_sido$pop)
+kr_jp_sido$landarea<- as.integer(kr_jp_sido$landarea)
+kr_jp_sido$police<- as.integer(kr_jp_sido$police)
+
+saveRDS(kr_jp_sido, file = "kr_jp_sido.rds")
+```
+
+
+```{r}
+kr_jp_sido <- readRDS("kr_jp_sido.rds")
+```
+
+
+```{r}
+library(MatchingFrontier)
+match.on_jp <- colnames(kr_jp_sido)[!(colnames(kr_jp_sido) %in% c('code', 'name', 'country', 'treated', 'police'))]
+match.on_jp
+mahal.frontier <- makeFrontier(treated~ pop + landarea, data = kr_jp_sido)
+mahal.frontier
+plot(mahal.frontier)
+summary(mahal.frontier)
+```
+
+
+```{r}
+matched.data_jp <- generateDataset(mahal.frontier, N = 15)
+```
+
+
+```{r}
+write.csv(matched.data_jp, "matcheddata_jp.csv", row.names=FALSE)
+```
+
+
+
+# 영국 시도 분석
+
+
+```{r}
+library("readxl")
+england<- read_excel("england.xls")
+```
+
+
+```{r}
+kr_en<- rbind(korea_sido, england)
+kr_en$treated<- as.integer(kr_en$treated)
+kr_en$pop<- as.integer(kr_en$pop)
+kr_en$landarea<- as.integer(kr_en$landarea)
+kr_en$police<- as.integer(kr_en$police)
+
+saveRDS(kr_en, file = "kr_en.rds")
+```
+
+
+```{r}
+kr_en <- readRDS("kr_en.rds")
+```
+
+
+```{r}
+library(MatchingFrontier)
+match.on <- colnames(kr_en)[!(colnames(kr_en) %in% c('code', 'name', 'country', 'treated', 'police'))]
+match.on
+```
+
+
+```{r}
+mahal.frontier <- makeFrontier(dataset = kr_en, treatment = 'treated', match.on = match.on)
+
+```
+
+
+```{r}
+matched.data <- generateDataset(mahal.frontier, N = 20)
+```
+
+
+```{r}
+write.csv(matched.data, "matcheddata_en.csv", row.names=FALSE)
+```
+
+
+
+
+
+# 1 미국 분석
+
+```{r}
+library("stringr")
+library("readxl")
+usland<- read_excel("usland.xls")
+usland$NAME<-str_replace(usland$NAME, " city", "")
+```
+
+
+```{r}
+uscity<- read_excel("us2019.xls")
+
+```
+
+
+```{r}
+library(dplyr)
+us <- left_join(uscity, usland, by=c("statename"="USPS", name="NAME"))
+```
+
+```{r}
+saveRDS(us, file = "us.rds")
+
+```
+
+```{r}
+write.csv(us, "us.csv")
+us <- readRDS("us.rds")
+```
+
+
+
+
+
+## 1.2. 미국분석
+
+
+```{r}
+rm(list=ls())
+gc()
+```
+
+```{r}
+library("stringr")
+library("readxl")
+```
+
+
+
+```{r}
+library(readr)
+us <- read_csv("us.csv")
+saveRDS(us, file = "us.rds")
+
+kr_police<- read_excel("kr_police.xls")
+```
+
+```{r}
+kr_us<- rbind(kr_police, us)
+kr_us$treated<- as.integer(kr_us$treated)
+kr_us$pop<- as.integer(kr_us$pop)
+kr_us$landarea<- as.integer(kr_us$landarea)
+kr_us$police<- as.integer(kr_us$police)
+
+saveRDS(kr_us, file = "kr_us.rds")
+```
+
+
+```{r}
+library(MatchingFrontier)
+kr_us <- readRDS("kr_us.rds")
+match.on_us <- colnames(kr_us)[!(colnames(kr_us) %in% c('code', 'name', 'country', 'treated', 'police'))]
+match.on_us
+```
+
+
+```{r}
+mahal.frontier <- makeFrontier(dataset = kr_us, treatment = 'treated', match.on = match.on_us)
+```
+
+
+```{r}
+matched.data_us <- generateDataset(mahal.frontier, N = 100)
+```
+
+
+```{r}
+write.csv(matched.data_us, "matcheddata_us.csv", row.names=TRUE, fileEncoding = 'cp949')
+```
+
+
+
+
+
+

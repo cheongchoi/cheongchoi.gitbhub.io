@@ -1,0 +1,1273 @@
+---
+title: "mcmc_measure"
+author: "Cheon Geun Choi"
+date: "2024-09-26"
+output: html_document
+---
+
+
+
+
+```{r}
+rm(list=ls())
+gc()
+library(haven)
+library(dplyr)
+library(tidyverse)
+```
+115	사회안전인식도_국가안보코드 1:
+116	사회안전인식도_자연재해코드
+117	사회안전인식도_건축물및시설물코드
+118	사회안전인식도_교통사고코드
+119	사회안전인식도_화재코드
+120	사회안전인식도_먹거리위생코드
+121	사회안전인식도_식량안보코드
+122	사회안전인식도_정보보안코드
+123	사회안전인식도_개인정보유출코드
+124	사회안전인식도_신종질병코드
+125	사회안전인식도_범죄발생코드
+
+1	매우 안전하다
+2	비교적 안전하다
+3	보통이다
+4	비교적 안전하지 않다
+5	매우 안전하지 않다
+
+19	건강평가코드	1	매우 좋다
+	건강평가코드	2	좋은 편이다
+	건강평가코드	3	보통이다
+	건강평가코드	4	나쁜 편이다
+	건강평가코드	5	매우 나쁘다
+
+
+```{r}
+#**********************************************************************  
+#	*주의 사항
+#		현재 스크립트 파일은 파일명만 출력되어 있습니다.
+#		따라서, 저장된 추출 결과 파일의 경로를 'read.table' 또는 'read.fwf'에 추가하여야 합니다.
+#	예) 다운로드 받은 폴더명 : C:\Download
+#	  ※ 파일 경로 추가 : "[다운로드 받은 폴더명]\기업활동조사_기업활동조사(제공)_2019_20191201_92007.txt"
+# 		read.table("C:\Download\기업활동조사_기업활동조사(제공)_2019_20191201_92007.txt", ~~~
+#		또는
+#		read.fwf("C:\Download\기업활동조사_기업활동조사(제공)_2019_20191201_92007.txt", ~~~
+#
+#		R 스크립트는 R 에서 파일 경로만 수정하시면 바로 실행(Ctrl+Alt+R)가능하며,
+#		데이터셋 생성 후에 R 의 여러 가지 분석 기능을 사용할 수 있습니다.
+#
+#**********************************************************************
+
+# install.packages("dplyr")
+
+
+mdis <- read.table("social.csv", header=FALSE, sep=",", colClasses = c("character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "numeric", "numeric", "character", "numeric", "numeric", "numeric", "numeric", "numeric"
+                                                                                                           , "numeric", "numeric", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "numeric", "numeric", "numeric", "numeric", "numeric", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "numeric", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "numeric", "numeric"), skip=1, na.string=c("*","**","***","****","*****","******","*******","********","*********","**********","."))
+
+table(mdis$V98)
+str(mdis$V115)
+mdis$id <- 1:39721
+df <- mdis %>%
+  filter(V242>19)%>%
+  select(id, V115:V125)
+ 
+saveRDS(df, file="dff.RDS")
+
+```
+
+```{r}
+rm(list=ls())
+gc()
+library(careless)
+library(psych)
+library(dplyr)
+
+df <- readRDS(file="dff.RDS")
+
+
+df <- df %>%
+  mutate(V115 = as.numeric(V115),
+         V116 = as.numeric(V116),
+         V117 = as.numeric(V117),
+         V118 = as.numeric(V118),
+         V119 = as.numeric(V119),
+         V120 = as.numeric(V120),
+         V121 = as.numeric(V121),
+         V122 = as.numeric(V122),
+         V123 = as.numeric(V123),
+         V124 = as.numeric(V124),
+         V125 = as.numeric(V125)
+         ) %>%
+  mutate(string = longstring(.)) %>%
+  mutate(md = outlier(., plot = FALSE))
+
+
+df <- df %>%
+  mutate(id = ifelse(is.na(V115) | is.na(V116)| is.na(V117) |is.na(V118) |is.na(V119) |is.na(V120) |is.na(V121) |is.na(V122) |is.na(V123) |is.na(V124) |is.na(V125), NA, id))
+
+
+df <- na.omit(df)
+```
+
+
+```{r}
+cutoff <- (qchisq(p = 1 - .001, df = ncol(df)-1))
+
+df_final <- df %>%
+  filter(string <= 10,
+         md < cutoff) %>%
+  select(-string, -md, -V121)   %>%
+  rename(security = V115,
+         nature = V116,
+         infra = V117,
+         accident = V118,
+         fire = V119,
+         food = V120,
+         information = V122,
+         privacy = V123,
+         virus = V124,         
+         crime = V125) 
+
+df_order <- readRDS("df_order.RDS")
+df_order <- df_order %>%
+  select(nat.scale, hu.scale)
+
+df_final<- cbind(df_final, df_order)
+table(df_final$nat.scale, df_final$hu.scale)
+
+```
+
+
+
+```{r}
+# saveRDS(df_final, file="df_final.RDS")
+```
+
+
+```{r}
+rm(list=ls())
+gc()
+library(dplyr)
+df<- readRDS("df_final.RDS")
+
+
+```
+
+115	사회안전인식도_국가안보코드 1:
+116	사회안전인식도_자연재해코드
+117	사회안전인식도_건축물및시설물코드
+118	사회안전인식도_교통사고코드
+119	사회안전인식도_화재코드
+120	사회안전인식도_먹거리위생코드
+121	사회안전인식도_식량안보코드
+122	사회안전인식도_정보보안코드
+123	사회안전인식도_개인정보유출코드
+124	사회안전인식도_신종질병코드
+125	사회안전인식도_범죄발생코드
+
+# Confirmatory Factor Analysis
+
+```{r}
+# Load required libraries
+library(psych)      # For factor analysis
+library(weights)    # For weighted statistics
+
+# Define the variables for the factor analysis
+vars <- c("nature", "security", "virus", "food", "accident", "fire")
+
+# Subset the data to include only relevant variables and remove missing values pairwise
+df_subset <- df[, vars]
+df_subset <- df_subset[complete.cases(df_subset), ] # Pairwise complete cases
+
+# Use the weights package to generate the weighted correlation matrix
+weighted_cor_matrix <- wtd.cor(df_subset, weight = df$metaweight)$correlation
+
+# Perform factor analysis using weighted correlation matrix
+factor_analysis <- fa(weighted_cor_matrix, nfactors = 2, fm = "pcf")
+
+# Print the factor loadings with a threshold for display (loadings below 0.3 will not be shown)
+print(factor_analysis$loadings, cutoff = 0.3)
+
+# Assuming the weighted correlation matrix is already computed in the variable `weighted_cor_matrix`
+# Perform factor analysis with Promax rotation (oblique rotation)
+factor_analysis_promax <- fa(weighted_cor_matrix, nfactors =2, fm = "pcf", rotate = "promax")
+
+# Print the factor loadings with a cutoff of 0.3 (similar to blanks(.3))
+print(factor_analysis_promax$loadings, cutoff = 0.3)
+
+```
+
+```{r}
+library(scatterplot3d)
+library(MASS)
+library(poLCA)
+library(ggplot2)
+library(haven)
+f <- cbind(nature, security, virus, food, accident, fire)~1 #formula of the poLCA model
+model2 <- poLCA(formula = f, maxiter=1000, nclass=2, nrep=10, data=df_subset, na.rm=T) # run latent profile model 2 classes
+model3 <- poLCA(formula = f, maxiter=1000, nclass=3, nrep=10, data=df_subset, na.rm=T) # run latent profile model 2 classes
+model4 <- poLCA(formula = f, maxiter=1000, nclass=4, nrep=10, data=df_subset, na.rm=T) # run latent profile model 2 classes
+# saveRDS(model2, "model.RDS")
+
+# probs.start.new <- poLCA.reorder(model2$probs.start,order(model2$P,decreasing=TRUE)) #set starting probabilities so that the model returns classes ordered from the biggest to smallest class (otherwise class order is random)
+#model <- poLCA(formula = f, maxiter=1000, nclass=4, nrep=10, data=df_subset, probs.start=probs.start.new, na.rm=T) # re-run latent profile model with set starting probabilities
+
+```
+
+# final 1
+
+```{r}
+# Goal: Estimate 1st final model
+# Dependencies: "df.Rdata"
+
+
+library(rjags)
+library(coda)
+load.module("glm")
+
+# install.packages("doMC", repos="http://R-Forge.R-project.org")
+library(foreach)
+library(doMC)  
+registerDoMC(4) 
+
+RNGkind("L'Ecuyer-CMRG") 
+
+set.seed(100)
+
+# Load recoded data
+
+df<- readRDS("df_final.RDS")
+
+
+
+attach(df)
+
+n <- dim(df)[1]
+## .huv ==. .hu, .nat ==> out
+
+
+fixed.hu <- rep(0, n)
+fixed.hu[hu.scale > 2 & nat.scale < 1] <- 2
+fixed.hu[hu.scale < 1 & nat.scale > 2] <- 1
+which(fixed.hu != 0)
+
+fixed.nat <- rep(0, n)
+fixed.nat[hu.scale > 2 & nat.scale < 1] <- 1
+fixed.nat[hu.scale < 1 & nat.scale > 2] <- 2
+which(fixed.nat != 0)
+
+table(fixed.hu, fixed.nat)
+
+```
+
+
+```{r}
+Y <- cbind(nature, security, virus, food, accident, fire)
+
+ntypes <- 2
+
+nact <- dim(Y)[2]
+
+wprior <- c(1, 1)
+
+##---------- BUGS/JAGS code ----------##
+
+
+modelString = "
+
+model{
+
+  for (i in 1:n) {
+  
+  
+    
+    for (j in 1:nact) {
+
+      for (c in 1:4) {
+        logit(gamma[i,j,c]) <- theta[c] - mu[i,j]
+        ## gamma[i,j,c] <- max(0, min(1,gamma[i,j,c]))
+      }
+    
+    Y[i,j,1] ~ dcat(p[i,j,1:5])
+
+    p[i,j,1] <- gamma[i,j,1]
+    p[i,j,2] <- gamma[i,j,2]-gamma[i,j,1]
+    p[i,j,3] <- gamma[i,j,3]-gamma[i,j,2]
+    p[i,j,4] <- gamma[i,j,4]-gamma[i,j,3]
+    p[i,j,5] <- 1-gamma[i,j,4]  
+    
+    mu[i,j] <- alpha[j] + alpha.nat[j] * (nat.type[i] - 1) + alpha.hu[j] * (hu.type[i] - 1)
+    
+    }
+
+    nat.type[i] <- ifelse(fixed.nat[i] != 0, fixed.nat[i], rnat.type[i])
+    rnat.type[i] ~ dcat(P.nat[1:2])
+
+    hu.type[i] <- ifelse(fixed.hu[i] != 0, fixed.hu[i], rhu.type[i])
+    rhu.type[i] ~ dcat(P.hu[1:2])
+
+  }
+
+  for (j in 1:nact) {
+    alpha[j] ~ dnorm(0, 0.01)
+  }
+
+  for (j in 1:(nact-1)) {
+    alpha.nat[j] ~ dlnorm(0, 0.01)
+  }
+
+  for (j in 2:nact) {
+    alpha.hu[j] ~ dlnorm(0, 0.01)
+  }
+
+ 
+  theta[1] <- -4.9511
+  theta[2] <- -2.1541
+  theta[3] <- -0.5416
+  theta[4] <- 1.5353
+  
+  
+  P.nat[1:ntypes] ~ ddirch(wprior[1:ntypes])
+  P.hu[1:ntypes] ~ ddirch(wprior[1:ntypes])
+
+
+
+  alpha.nat[nact] <- 0
+  alpha.hu[1] <- 0
+
+}	 
+
+"
+writeLines(modelString, con = "final1_2.bug")
+
+##---------- END OF BUGS/JAGS CODE ----------##
+
+data.jags  <- list("n" = n, "wprior" = wprior, "ntypes" = ntypes, "nact" = nact, "Y"=  array(Y, c(n,nact,1)), "fixed.nat" = fixed.nat, "fixed.hu" = fixed.hu)
+
+parameters.jags <- c("alpha", "nat.type", "alpha.nat", "P.nat", "hu.type", "alpha.hu", "P.hu")
+
+samples.final1_2 <- foreach(j = 1:3) %dopar% {
+
+  inits.jags <- list(list(.RNG.seed = sample(1:5000, 1), .RNG.name = "base::Mersenne-Twister"))
+  
+  model.jags <- jags.model("final1_2.bug", data = data.jags, inits = inits.jags, n.chains = 1, n.adapt = 1000)
+
+  mcmc.samples.final1 <- coda.samples(model.jags, variable.names = parameters.jags, n.iter = 1000, thin = 10)
+
+  mcmc.samples.final1[[1]]
+
+}
+
+
+save(samples.final1_2, file = "samples_final1_2.Rdata")
+```
+
+## gelman diagnostic test
+```{r}
+load("samples_final1_2.Rdata")
+library(jagsUI)
+library(wiqid)
+library(bayesplot)
+
+ouOut1 <- samples.final1_2[[1]]
+ouOut2 <- samples.final1_2[[2]]
+ouOut3 <- samples.final1_2[[3]]
+ouOut <- rbind(ouOut1, ouOut2, ouOut3)
+
+mcmc_trace(as.mcmc(ouOut), pars = "alpha.nat[5]")
+colnames(ouOut)
+```
+
+
+```{r}
+
+
+```
+
+
+## theta 고정하기
+```{r}
+attach(df)
+
+n <- dim(df)[1]
+Y <- cbind(nature, security, virus, food, accident, fire)
+Y <- as.vector(Y)
+male <- rep(male, 6)
+spouse<-rep(spouse,6)
+age<-rep(age, 6)
+education <- rep(education, 6)
+employed <- rep(employed, 6)
+income <- rep(income, 6)
+satis <- rep(satis, 6)
+health <- rep(health, 6)
+
+df2 <- cbind(Y, male, spouse, age, education, employed, income, satis, health, prepared)
+
+freq.ologit <- MASS::polr(as.factor(Y) ~ male + spouse + age + education + employed + income + satis + health)
+summary(freq.ologit)
+
+#     Value     Std. Error t value  
+#1|2   -4.9511    0.0386  -128.1624
+#2|3   -2.1541    0.0355   -60.6307
+#3|4   -0.5416    0.0351   -15.4111
+#4|5    1.5353    0.0361    42.5744
+
+
+```
+
+
+143	재난긴급상황시대처수준_긴급상황시전화번호인식코드	1	아주 잘 알고 있다
+	재난긴급상황시대처수준_긴급상황시전화번호인식코드	2	조금 알고 있다
+	재난긴급상황시대처수준_긴급상황시전화번호인식코드	3	잘 모른다
+	재난긴급상황시대처수준_긴급상황시전화번호인식코드	4	전혀 모른다
+144	재난긴급상황시대처수준_행동요령인식코드	1	아주 잘 알고 있다
+	재난긴급상황시대처수준_행동요령인식코드	2	조금 알고 있다
+	재난긴급상황시대처수준_행동요령인식코드	3	잘 모른다
+	재난긴급상황시대처수준_행동요령인식코드	4	전혀 모른다
+145	재난긴급상황시대처수준_소화기사용법인식코드	1	아주 잘 알고 있다
+	재난긴급상황시대처수준_소화기사용법인식코드	2	조금 알고 있다
+	재난긴급상황시대처수준_소화기사용법인식코드	3	잘 모른다
+	재난긴급상황시대처수준_소화기사용법인식코드	4	전혀 모른다
+146	재난긴급상황시대처수준_인공호흡심폐소생술방법인식코드	1	아주 잘 알고 있다
+	재난긴급상황시대처수준_인공호흡심폐소생술방법인식코드	2	조금 알고 있다
+	재난긴급상황시대처수준_인공호흡심폐소생술방법인식코드	3	잘 모른다
+	재난긴급상황시대처수준_인공호흡심폐소생술방법인식코드	4	전혀 모른다
+
+
+
+
+```{r}
+#**********************************************************************  
+#	*주의 사항
+#		현재 스크립트 파일은 파일명만 출력되어 있습니다.
+#		따라서, 저장된 추출 결과 파일의 경로를 'read.table' 또는 'read.fwf'에 추가하여야 합니다.
+#	예) 다운로드 받은 폴더명 : C:\Download
+#	  ※ 파일 경로 추가 : "[다운로드 받은 폴더명]\기업활동조사_기업활동조사(제공)_2019_20191201_92007.txt"
+# 		read.table("C:\Download\기업활동조사_기업활동조사(제공)_2019_20191201_92007.txt", ~~~
+#		또는
+#		read.fwf("C:\Download\기업활동조사_기업활동조사(제공)_2019_20191201_92007.txt", ~~~
+#
+#		R 스크립트는 R 에서 파일 경로만 수정하시면 바로 실행(Ctrl+Alt+R)가능하며,
+#		데이터셋 생성 후에 R 의 여러 가지 분석 기능을 사용할 수 있습니다.
+#
+#**********************************************************************
+
+rm(list=ls())
+gc()
+# install.packages("dplyr")
+library(dplyr)
+library(tidyverse)
+library(careless)
+library(psych)
+
+
+mdis <- read.table("social.csv", header=FALSE, sep=",", colClasses = c("character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "numeric", "numeric", "character", "numeric", "numeric", "numeric", "numeric", "numeric"
+                                                                                                           , "numeric", "numeric", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "numeric", "numeric", "numeric", "numeric", "numeric", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "numeric", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "numeric", "numeric"), skip=1, na.string=c("*","**","***","****","*****","******","*******","********","*********","**********","."))
+
+mdis$id <- 1:39721
+mdis <- mdis %>%
+  select(id, V4, V19, V143:V146, V241, V242, V244, V245, V258, V280, V282, V290, V291, V292 ) %>%
+  mutate(V4 = case_when(as.numeric(V4) ==  1 ~ 5,
+                           as.numeric(V4) == 2 ~ 4,
+                           as.numeric(V4) == 3 ~ 3,
+                           as.numeric(V4) == 4 ~ 2,
+                           as.numeric(V4) == 5 ~ 1),
+        V19 = case_when(as.numeric(V19) ==  1 ~ 5,
+                           as.numeric(V19) == 2 ~ 4,
+                           as.numeric(V19) == 3 ~ 3,
+                           as.numeric(V19) == 4 ~ 2,
+                           as.numeric(V19) == 5 ~ 1),
+        V143 = case_when(as.numeric(V143) ==  1 ~ 4,
+                           as.numeric(V143) == 2 ~ 3,
+                           as.numeric(V143) == 3 ~ 2,
+                           as.numeric(V143) == 4 ~ 1), 
+        V144 = case_when(as.numeric(V144) ==  1 ~ 4,
+                           as.numeric(V144) == 2 ~ 3,
+                           as.numeric(V144) == 3 ~ 2,
+                           as.numeric(V144) == 4 ~ 1),
+        V145 = case_when(as.numeric(V145) ==  1 ~ 4,
+                           as.numeric(V145) == 2 ~ 3,
+                           as.numeric(V145) == 3 ~ 2,
+                           as.numeric(V145) == 4 ~ 1),       
+        V146 = case_when(as.numeric(V146) ==  1 ~ 4,
+                           as.numeric(V146) == 2 ~ 3,
+                           as.numeric(V146) == 3 ~ 2,
+                           as.numeric(V146) == 4 ~ 1),
+        V241 = as.numeric(V241),
+        V244 = as.numeric(V244),
+        V245 = as.numeric(V245),
+        V258 = as.numeric(V258),
+        V280 = as.numeric(V280),
+        V282 = as.numeric(V282),
+        V290 = case_when(as.numeric(V290) ==  610 ~ 1,
+                           as.numeric(V290) == 620 ~ 2,
+                           as.numeric(V290) == 630 ~ 3,
+                           as.numeric(V290) == 640 ~ 4,
+                           as.numeric(V290) == 650 ~ 5,
+                         as.numeric(V290) == 660 ~ 6,
+                         as.numeric(V290) == 678 ~ 7),
+        V291 = as.numeric(V291),
+        V292 = as.numeric(V292)) %>%
+  mutate(male = ifelse(V241==1, 1, 0), 
+         age = V242, 
+         edu = ifelse(V244==0 | V244==1 | V244==2,1,  # 0: 중졸미만, 1 중졸, 2. 고졸, 3, 전문대졸, 4, 대졸, 5, 대학원 졸
+                       ifelse(V244==3, 2,
+                                     ifelse(V244==4, 3,
+                                                ifelse(V244==5, 4,
+                                                       ifelse(V244==6| V244==7, 5, 0))))),
+         degree = ifelse(V245==1, 1,
+                     ifelse(V245==2 | V245==3 | V245==4 |  V245 ==5, 2, NA)),
+         edu = replace(edu, edu==2 & degree!=1, 1),
+         edu = replace(edu, edu==3 & degree!=1, 2),
+         edu = replace(edu, edu==4 & degree!=1, 3),
+         edu = replace(edu, edu==5 & degree!=1, 4),
+         spouse = ifelse(V280==120, 1, 0), # 1: 배우자 있음
+         employed = ifelse(V282==150, 1, 0),
+         income = ifelse(V290==7 & V291==670, 7,
+                         ifelse(V290==7 & V292 ==690, 8,
+                                ifelse(V290==7 & V292==700, 9, V290))),
+
+         prepared = V144                         ) %>%
+  rename(education = edu,
+         satis = V4,
+         health = V19
+         ) %>%
+  select(id, male, spouse, age, education, employed, income, satis, health, prepared)
+
+
+df<- readRDS("df_final.RDS")
+df <- left_join(df, mdis, by="id")
+```
+# 기술통계
+```{r}
+mean(df$nature)
+sd(df$nature)
+
+mean(df$security)
+sd(df$security)
+
+mean(df$virus)
+sd(df$virus)
+
+mean(df$food)
+sd(df$food)
+
+mean(df$accident)
+sd(df$accident)
+
+mean(df$fire)
+sd(df$fire)
+```
+
+
+```{r}
+mean(df$male)
+sd(df$male)
+
+mean(df$spouse)
+sd(df$spouse)
+
+mean(df$age)
+sd(df$age)
+
+mean(df$education)
+sd(df$education)
+
+mean(df$employed)
+sd(df$employed)
+
+mean(df$income)
+sd(df$income)
+
+mean(df$satis)
+sd(df$satis)
+
+mean(df$health)
+sd(df$health)
+
+mean(df$prepared)
+sd(df$prepared)
+```
+
+
+```{r}
+library(rjags)
+library(coda)
+load.module("glm")
+
+library(foreach)
+library(doMC)  
+registerDoMC(12)  
+
+RNGkind("L'Ecuyer-CMRG") 
+
+set.seed(200)
+
+load("samples_final1_2.Rdata")
+
+nat.type.samples <- rbind(samples.final1_2[[1]][ , substr(colnames(samples.final1_2[[1]]), 1, 4) == "nat."], samples.final1_2[[2]][ , substr(colnames(samples.final1_2[[2]]), 1, 4) == "nat."], samples.final1_2[[3]][ , substr(colnames(samples.final1_2[[3]]), 1, 4) == "nat."])
+
+hu.type.samples <- rbind(samples.final1_2[[1]][ , substr(colnames(samples.final1_2[[1]]), 1, 2) == "hu"], samples.final1_2[[2]][ , substr(colnames(samples.final1_2[[2]]), 1, 2) == "hu"], samples.final1_2[[3]][ , substr(colnames(samples.final1_2[[3]]), 1, 2) == "hu"])
+
+N.draws <- 30 # NUMBER OF DRAWS FROM TYPE DISTRIBUTION
+
+tosample <- matrix(sample(1:300, N.draws * dim(nat.type.samples)[2], replace = T), ncol = dim(nat.type.samples)[2])
+
+nat.type.smallsamples <- matrix(NA, ncol = dim(nat.type.samples)[2], nrow = N.draws)
+hu.type.smallsamples <- matrix(NA, ncol = dim(hu.type.samples)[2], nrow = N.draws)
+
+for (i in 1:dim(nat.type.samples)[2]) {
+    nat.type.smallsamples[ , i] <- nat.type.samples[tosample[ , i], i] - 1
+    hu.type.smallsamples[ , i] <- hu.type.samples[tosample[ , i], i] - 1
+  }
+
+##---------- BUGS/JAGS code 2nd stage model ----------##
+
+modelString = "
+
+model{
+
+  for (i in 1:n) { 
+
+    typeComb[i] ~ dcat(p[i, 1:ncells])
+
+    for (c in 1:ncells) {
+
+      mu[i, c] <- beta[c, 1] +
+      beta[c, 2] * male[i] + 
+      beta[c, 3] * spouse[i] + 
+      beta[c, 4] * age[i] +
+      beta[c, 5] * education[i] +
+      beta[c, 6] * employed[i] +
+      beta[c, 7] * income[i] +
+      beta[c, 8] * satis[i] +
+      beta[c, 9] * health[i] + 
+      beta[c, 10] * prepared[i] 
+      
+
+      emu[i, c] <- exp(mu[i, c])
+
+      p[i, c] <- emu[i, c] / sum(emu[i, 1:ncells])
+
+    }
+
+  }
+
+  for (k in 1:nvar) {
+    beta[1, k] <- 0 
+  }
+
+  for (c in 2:ncells) {
+    beta[c, 1:nvar] ~ dmnorm(b0, B0)
+  }
+
+}
+
+" 
+
+writeLines(modelString, con = "final2_2.bug")
+
+##---------- ESTIMATE 2-STAGE MODEL ----------##
+
+ncells <- 4
+
+nvar <- 10
+
+b0 <- rep(0, nvar)
+B0 <- diag(nvar) * 0.01
+
+
+samples.final2_2 <- foreach(j = 1:N.draws) %dopar% {
+  
+  nat.type <- nat.type.smallsamples[j, ]
+  hu.type <- hu.type.smallsamples[j, ]
+  
+  typeComb <- NULL
+  typeComb[nat.type == 0 & hu.type == 0] <- 1
+  typeComb[nat.type == 0 & hu.type == 1] <- 2
+  typeComb[nat.type == 1 & hu.type == 0] <- 3
+  typeComb[nat.type == 1 & hu.type == 1] <- 4
+  
+  df2 <- data.frame("typeComb" = typeComb, "male" = df$male, "spouse" = df$spouse, "age" = df$age, "education" = df$education, "employed" = df$employed, "income" = df$income, "satis" = df$satis, "health" = df$health, "prepared" = df$prepared)
+
+
+  # Standardize covariates
+  df2[, 2:10] <- scale(df2[, 2:10])
+
+  n <- dim(df2)[1]
+  
+  data2.jags  <- list("n" = n, "ncells" = ncells, "nvar" = nvar, "b0"= b0, "B0"= B0, "typeComb" = df2$typeComb, "male" = df2$male, "spouse" = df2$spouse, "age" = df2$age, "education" = df2$education, "employed" = df2$employed, "income" = df2$income, "satis" = df2$satis, "health" = df2$health, "prepared" = df2$prepared)
+  
+  parameters2.jags<-c("beta")
+  
+  inits.jags <- list(list(.RNG.seed = sample(1:1000, 1), .RNG.name = "base::Mersenne-Twister"))
+
+  model2.jags <- jags.model("final2_2.bug", data = data2.jags, inits = inits.jags, n.chains = 1, n.adapt = 1000)
+  
+  mcmc.samples.final2_2 <- coda.samples(model2.jags, variable.names = parameters2.jags, n.iter = 1000, thin = 10)
+  
+  mcmc.samples.final2_2[[1]]
+  
+}
+
+save(samples.final2_2, file = "samples_final2_2.Rdata")
+
+```
+
+
+## gelman diagnostic test
+```{r}
+load("samples_final2_2.Rdata")
+library(jagsUI)
+library(wiqid)
+library(bayesplot)
+
+ouOut1 <- samples.final2_2[[1]]
+ouOut2 <- samples.final2_2[[2]]
+ouOut3 <- samples.final2_2[[3]]
+ouOut <- rbind(ouOut1, ouOut2, ouOut3)
+
+mcmc_trace(as.mcmc(ouOut), pars = "beta[3,8]")
+colnames(ouOut)
+```
+
+
+
+# 3단계 분석
+
+```{r}
+# Goal: Make Table 1 and Figures 1-2
+# Dependencies: "samples_final1_2.Rdata"
+
+# setwd("~/Replication Package")
+
+rm(list=ls())
+gc()
+library(xtable)
+library(scales)
+library(gplots)
+
+load("samples_final1_2.Rdata")
+
+options(digits = 3)
+options(scipen = 999)
+
+# We first look at the results of the latent class model, usted to classify respondents into four participatory types:
+  
+# (1) Low Natural Threat, low Human Threat (NoFearer)
+# (2) Low Natural Threat, high Human Threat (HumanFearer)
+# (3) High Natural Threatl, low Human Threat (NatureFearer)
+# (4) High Natural Threat, high Human Threat (AllFearer)
+
+## Influence of participatory types on involvement in political activities
+
+# Our expectation is that $\alpha_{C, j}$ should be higher for NatureFearer activities, and that $\alpha_{U, j}$ should be higher for Human Threat activites.
+
+# To ensure identification of model parameters, we set $\alpha_{C, j}$ to zero for the activity a-priori considered to be the most Human Threat one (blocking roads), and $\alpha_{U, j}$ to zero for the activity a-priori considered to be the most NatureFearer one (attending meetings of municipal bodies). For the remaining activities, these parameters are allowed to vary freely.
+
+# The following table give average values and 95% posterior intervals for all $\alpha_{C, j}$'s and $\alpha_{U, j}$'s:
+
+act.names <- c("nature", "security","virus", "food", "accident", "fire")
+
+alpha.samples <- rbind(samples.final1_2[[1]][ , substr(colnames(samples.final1_2[[1]]), 1, 6) == "alpha["], samples.final1_2[[2]][ , substr(colnames(samples.final1_2[[2]]), 1, 6) == "alpha["], samples.final1_2[[3]][ , substr(colnames(samples.final1_2[[3]]), 1, 6) == "alpha["])
+
+alpha.nat.samples <- rbind(samples.final1_2[[1]][ , substr(colnames(samples.final1_2[[1]]), 1, 7) == "alpha.n"], samples.final1_2[[2]][ , substr(colnames(samples.final1_2[[2]]), 1, 7) == "alpha.n"], samples.final1_2[[3]][ , substr(colnames(samples.final1_2[[3]]), 1, 7) == "alpha.n"])
+
+alpha.hu.samples <- rbind(samples.final1_2[[1]][ , substr(colnames(samples.final1_2[[1]]), 1, 7) == "alpha.h"], samples.final1_2[[2]][ , substr(colnames(samples.final1_2[[2]]), 1, 7) == "alpha.h"], samples.final1_2[[3]][ , substr(colnames(samples.final1_2[[3]]), 1, 7) == "alpha.h"])
+
+T.ac.i <- apply(alpha.nat.samples, 2, mean)
+T.ac.ii <- apply(alpha.nat.samples, 2, quantile, p = c(0.025, 0.975))
+T.ac <- t(rbind(T.ac.i, T.ac.ii))
+colnames(T.ac) <- c("mean", "2.5%", "97.5%")
+rownames(T.ac) <- act.names
+
+T.au.i <- apply(alpha.hu.samples, 2, mean)
+T.au.ii <- apply(alpha.hu.samples, 2, quantile, p = c(0.025, 0.975))
+T.au <- t(rbind(T.au.i, T.au.ii))
+colnames(T.au) <- c("mean", "2.5%", "97.5%")
+rownames(T.au) <- act.names
+
+##-------- TABLE 1 --------##
+
+Table1 <- cbind(T.ac, T.au)
+
+print(xtable(Table1))
+
+# As expected, $\alpha_{C, j}$'s are higher for NatureFearer activities than Human Threat activites, and $\alpha_{U, j}$'s are higher for Human Threat activities than NatureFearer activites.
+
+### Type Effects
+
+# For each combination of NatureFearer and Human Threat types, we can compute predicted probabilities of participation in each activity.
+
+inv.logit <- function(x) {
+  y <- 1 / (1 + exp(-x))
+  return(y)
+}
+
+n.iters <- dim(samples.final1_2[[1]])[1] * 3
+n.act <- dim(alpha.samples)[2]
+n.ctypes <- 4
+pred.P <- array(NA, c(n.iters, n.act, n.ctypes))
+pred.change.P <- array(NA, c(n.iters, n.act, (n.ctypes - 1)))
+
+pred.P[,,1] <- inv.logit(alpha.samples)
+pred.P[,,2] <- inv.logit(alpha.samples + alpha.hu.samples)
+pred.P[,,3] <- inv.logit(alpha.samples + alpha.nat.samples)
+pred.P[,,4] <- inv.logit(alpha.samples + alpha.nat.samples + alpha.hu.samples)
+
+pred.change.P[ , , 1] <- pred.P[ , , 2] - pred.P[ , , 1]
+pred.change.P[ , , 2] <- pred.P[ , , 3] - pred.P[ , , 1]
+pred.change.P[ , , 3] <- pred.P[ , , 4] - pred.P[ , , 1]
+
+mean.prob <- apply(pred.P, c(2,3), mean)  * 100
+rownames(mean.prob) <- act.names
+quantile.prob.low <- apply(pred.P, c(2, 3), quantile, p = c(0.025))  * 100
+quantile.prob.high <- apply(pred.P, c(2, 3), quantile, p = c(0.975))  * 100
+
+mean.chprob <- apply(pred.change.P, c(2, 3), mean)  * 100
+rownames(mean.chprob) <- act.names
+quantile.chprob.low <- apply(pred.change.P, c(2, 3), quantile, p = c(0.025))  * 100
+quantile.chprob.high <- apply(pred.change.P, c(2, 3), quantile, p = c(0.975))  * 100
+
+T.probs <- cbind(mean.prob[, 1], quantile.prob.low[, 1], quantile.prob.high[, 1], mean.chprob[, 1], quantile.chprob.low[, 1], quantile.chprob.high[, 1], mean.chprob[, 2], quantile.chprob.low[, 2], quantile.chprob.high[, 2], mean.chprob[, 3], quantile.chprob.low[, 3], quantile.chprob.high[, 3])
+colnames(T.probs) <- c("P(Y|T_LL)", "2.5%", "97.5%", "P(Y|T_LH) - P(Y|T_LL)", "2.5%", "97.5%", "P(Y|T_HL) - P(Y|T_LL)", "2.5%", "97.5%", "P(Y|T_HH) - P(Y|T_LL)", "2.5%", "97.5%")
+rownames(T.probs) <- act.names
+
+nat.final <- order(T.ac.i , decreasing = TRUE)
+
+##-------- FIGURE 2 --------##
+
+# The following bar plot gives participation probabilities for the four combined types:
+
+jpeg("Figure2.png", width = 750, height = 500)
+barplot2(height = mean.prob[nat.final,], beside = TRUE, ci.l = quantile.prob.low[nat.final,], ci.u = quantile.prob.high[nat.final,],col=rev(gray.colors(6)),ylim=c(0,100), plot.ci = TRUE, ci.color = "red", names.arg = c("No Hazard Fear", "Daily Hazard Fear", "Non-Ordinary Hazard Fear", "All Hazard Fear"), ylab = "Fear Probability")
+axis(2)
+legend(0, 101, rownames(mean.prob[nat.final, ]), cex = 1.5, bty = "n", fill = rev(gray.colors(6)))
+# mtext("Fear by Type",at = 24, line = 1, cex = 1)
+dev.off()
+
+# For each combined type, activities are sorted based on the extent to which they are affected by the NatureFearer type (from higher $\alpha_{C, j}$ to lower $\alpha_{C, j}$). Political activities such as participation in protests, strikes, and road cloks tend to have low $\alpha_{C, j}$ and are therefore located toward the right of the spectrum.
+
+## Type assignments
+
+nat.type.samples <- rbind(samples.final1_2[[1]][ , substr(colnames(samples.final1_2[[1]]), 1, 4) == "nat."], samples.final1_2[[2]][ , substr(colnames(samples.final1_2[[2]]), 1, 4) == "nat."], samples.final1_2[[3]][ , substr(colnames(samples.final1_2[[3]]), 1, 4) == "nat."])
+
+hu.type.samples <- rbind(samples.final1_2[[1]][ , substr(colnames(samples.final1_2[[1]]), 1, 2) == "hu"], samples.final1_2[[2]][ , substr(colnames(samples.final1_2[[2]]), 1, 2) == "hu"], samples.final1_2[[3]][ , substr(colnames(samples.final1_2[[3]]), 1, 2) == "hu"])
+
+# Participatory types are not fixed for each individual; they are determined probabilistically.
+
+prob.nat.type <- apply(nat.type.samples - 1, 2, mean) 
+prob.hu.type <- apply(hu.type.samples - 1, 2, mean)
+
+per.natsiders <- paste(round(mean(ifelse(prob.nat.type < 0.5 & prob.hu.type < 0.5, 1, 0)) * 100, 1), "%", sep = "")
+per.engaged <- paste(round(mean(ifelse(prob.nat.type >= 0.5 & prob.hu.type < 0.5, 1, 0)) * 100, 1), "%", sep = "")
+per.HumanFearers <- paste(round(mean(ifelse(prob.nat.type < 0.5 & prob.hu.type >= 0.5, 1, 0)) * 100, 1), "%", sep = "")
+per.factotums <- paste(round(mean(ifelse(prob.nat.type >= 0.5 & prob.hu.type >= 0.5, 1, 0)) * 100, 1), "%", sep = "")
+
+##-------- FIGURE 1 --------##
+
+# The following scatterplot gives the relationship between the probability of being assigned a high NatureFearer type, and the probability of being assigned a high Human Threat type. Each point in the plot corresponds to a survey respondent.
+
+jpeg("Figure1.png", width = 600, height = 600)
+plot(prob.nat.type, prob.hu.type, xlab = "Probability of Non-Ordinary Hazard Fear Type",ylab = "Probability of Daily Hazard Fear Type", col = alpha("Gray", 0.3))
+abline(h = 0.5, lty = 2)
+abline(v = 0.5, lty = 2)
+text(0.25, 0.25, paste("No Hazard Fear\n", "(",per.natsiders,")", sep = ""), col = "red")
+text(0.75, 0.25, paste("Non-Ordinary Hazard Fear\n", "(",per.engaged,")", sep = ""), col = "red")
+text(0.25, 0.75, paste("Daily Hazard Fear\n", "(",per.HumanFearers,")", sep = ""), col = "red")
+text(0.75, 0.75, paste("All Hazard Fear\n", "(",per.factotums,")", sep = ""), col = "red")
+dev.off()
+
+
+```
+#
+```{r}
+# Goal: Make Figure 3
+# Dependencies: "samples_stage2.Rdata"
+
+# setwd("~/Replication Package")
+
+rm(list=ls())
+gc()
+library(xtable)
+library(scales)
+library(gplots)
+library(coda)
+library(plotrix)
+
+load("samples_final2_2.Rdata")
+
+samples.stage2 <- as.mcmc.list(samples.final2_2)
+
+coef.samples <- samples.stage2[, substr(names(samples.stage2[[1]][1,]), 1, 6) != "beta[1"]
+
+coef.samples.all30 <- NULL
+for (j in 1:30) {
+  coef.samples.all30 <- rbind(coef.samples.all30, coef.samples[[j]])
+}
+
+N.iters <- dim(coef.samples.all30)[1]
+
+beta.samples.type2 <- coef.samples.all30[, substr(colnames(coef.samples.all30), 1, 6) == "beta[2"]
+beta.samples.type3 <- coef.samples.all30[, substr(colnames(coef.samples.all30), 1, 6) == "beta[3"]
+beta.samples.type4 <- coef.samples.all30[, substr(colnames(coef.samples.all30), 1, 6) == "beta[4"]
+
+beta.means.type2 <- apply(beta.samples.type2, 2, mean)
+beta.means.type3 <- apply(beta.samples.type3, 2, mean)
+beta.means.type4 <- apply(beta.samples.type4, 2, mean)
+
+beta.ql.type2 <- apply(beta.samples.type2, 2, quantile, p = 0.05)
+beta.ql.type3 <- apply(beta.samples.type3, 2, quantile, p = 0.05)
+beta.ql.type4 <- apply(beta.samples.type4, 2, quantile, p = 0.05)
+
+beta.qu.type2 <- apply(beta.samples.type2, 2, quantile, p = 0.95)
+beta.qu.type3 <- apply(beta.samples.type3, 2, quantile, p = 0.95)
+beta.qu.type4 <- apply(beta.samples.type4, 2, quantile, p = 0.95)
+
+##-------- FIGURE 3 --------##
+
+varnames <- c("male", "spouse", "age", "education", "employed", "income", "satis", "health", "prepared")
+
+
+
+jpeg("Figure3.png", width = 850, height = 500)
+
+par(mfrow = c(1, 3)) 
+par(oma = c(5, 11, 0, 0), mar = c(0, 0, 2, 2)) 
+
+# (L, H) vs. (L, L)
+
+plotCI(y = 1:9 - 0.1, x = rev(beta.means.type2[2:10]), err = "x", ui = rev(beta.qu.type2[2:10]), li = rev(beta.ql.type2[2:10]), axes = FALSE, ann = FALSE, ylim = c(0.7, 9.1), xlim = c(-0.35, 0.3), pch = 16, pt.bg = par(cex = 0.75), sfrac = 0.005, lwd = 1, col = "black")
+axis(side = 1 , cex.axis = 1)
+axis(side = 2 , las = 1, at = c(1:9), cex.axis = 1,labels = rev(varnames), las = 2)
+mtext("Daily Hazard Fear vs. No Hazard Fear", at = 0, line = 1, cex = 0.9)
+abline(v = 0, col = "grey63")
+
+# (H, L) vs. (L, L)
+
+plotCI(y = 1:9 - 0.1, x = rev(beta.means.type3[2:10]), err = "x", ui = rev(beta.qu.type3[2:10]), li = rev(beta.ql.type3[2:10]), axes = FALSE, ann = FALSE, ylim = c(0.7, 9.1), xlim = c(-0.35, 0.3), pch = 16, pt.bg = par(cex = 0.75), sfrac = 0.005, lwd = 1, col = "black")
+axis(side = 1, cex.axis = 1)
+mtext("Non-Ordinary Hazard Fear vs. No Hazard Fear",at = 0, line = 1, cex = 0.9)
+abline(v=0,col="grey63")
+
+# (H, H) vs. (L, L)
+
+plotCI(y = 1:9 - 0.1, x = rev(beta.means.type4[2:10]), err = "x", ui = rev(beta.qu.type4[2:10]), li = rev(beta.ql.type4[2:10]), axes = FALSE, ann = FALSE, ylim = c(0.7, 9.1), xlim = c(-0.35, 0.3), pch = 16, pt.bg = par(cex = 0.75), sfrac = 0.005, lwd = 1, col = "black")
+axis(side = 1, cex.axis = 1)
+mtext("All Hazard Fear vs. No Hazard Fear", at = 0, line = 1, cex = 0.9)
+abline(v = 0, col = "grey63")
+
+dev.off()
+
+```
+
+
+
+
+```{r}
+#**********************************************************************  
+#	*주의 사항
+#		현재 스크립트 파일은 파일명만 출력되어 있습니다.
+#		따라서, 저장된 추출 결과 파일의 경로를 'read.table' 또는 'read.fwf'에 추가하여야 합니다.
+#	예) 다운로드 받은 폴더명 : C:\Download
+#	  ※ 파일 경로 추가 : "[다운로드 받은 폴더명]\기업활동조사_기업활동조사(제공)_2019_20191201_92007.txt"
+# 		read.table("C:\Download\기업활동조사_기업활동조사(제공)_2019_20191201_92007.txt", ~~~
+#		또는
+#		read.fwf("C:\Download\기업활동조사_기업활동조사(제공)_2019_20191201_92007.txt", ~~~
+#
+#		R 스크립트는 R 에서 파일 경로만 수정하시면 바로 실행(Ctrl+Alt+R)가능하며,
+#		데이터셋 생성 후에 R 의 여러 가지 분석 기능을 사용할 수 있습니다.
+#
+#**********************************************************************
+
+rm(list=ls())
+gc()
+# install.packages("dplyr")
+library(dplyr)
+library(tidyverse)
+library(careless)
+library(psych)
+
+
+mdis <- read.table("social.csv", header=FALSE, sep=",", colClasses = c("character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "numeric", "numeric", "character", "numeric", "numeric", "numeric", "numeric", "numeric"
+                                                                                                           , "numeric", "numeric", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "numeric", "numeric", "numeric", "numeric", "numeric", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "numeric", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character", "character"
+                                                                                                           , "character", "character", "character", "character", "character", "character", "character", "character", "character", "numeric", "numeric"), skip=1, na.string=c("*","**","***","****","*****","******","*******","********","*********","**********","."))
+
+mdis$id <- 1:39721
+mdis <- mdis %>%
+  dplyr::select(id, V4, V19, V143:V146, V241, V242, V244, V245, V258, V280, V282, V290, V291, V292 ) %>%
+  mutate(V4 = case_when(as.numeric(V4) ==  1 ~ 5,
+                           as.numeric(V4) == 2 ~ 4,
+                           as.numeric(V4) == 3 ~ 3,
+                           as.numeric(V4) == 4 ~ 2,
+                           as.numeric(V4) == 5 ~ 1),
+        V19 = case_when(as.numeric(V19) ==  1 ~ 5,
+                           as.numeric(V19) == 2 ~ 4,
+                           as.numeric(V19) == 3 ~ 3,
+                           as.numeric(V19) == 4 ~ 2,
+                           as.numeric(V19) == 5 ~ 1),
+        V143 = case_when(as.numeric(V143) ==  1 ~ 4,
+                           as.numeric(V143) == 2 ~ 3,
+                           as.numeric(V143) == 3 ~ 2,
+                           as.numeric(V143) == 4 ~ 1), 
+        V144 = case_when(as.numeric(V144) ==  1 ~ 4,
+                           as.numeric(V144) == 2 ~ 3,
+                           as.numeric(V144) == 3 ~ 2,
+                           as.numeric(V144) == 4 ~ 1),
+        V145 = case_when(as.numeric(V145) ==  1 ~ 4,
+                           as.numeric(V145) == 2 ~ 3,
+                           as.numeric(V145) == 3 ~ 2,
+                           as.numeric(V145) == 4 ~ 1),       
+        V146 = case_when(as.numeric(V146) ==  1 ~ 4,
+                           as.numeric(V146) == 2 ~ 3,
+                           as.numeric(V146) == 3 ~ 2,
+                           as.numeric(V146) == 4 ~ 1),
+        V241 = as.numeric(V241),
+        V244 = as.numeric(V244),
+        V245 = as.numeric(V245),
+        V258 = as.numeric(V258),
+        V280 = as.numeric(V280),
+        V282 = as.numeric(V282),
+        V290 = case_when(as.numeric(V290) ==  610 ~ 1,
+                           as.numeric(V290) == 620 ~ 2,
+                           as.numeric(V290) == 630 ~ 3,
+                           as.numeric(V290) == 640 ~ 4,
+                           as.numeric(V290) == 650 ~ 5,
+                         as.numeric(V290) == 660 ~ 6,
+                         as.numeric(V290) == 678 ~ 7),
+        V291 = as.numeric(V291),
+        V292 = as.numeric(V292)) %>%
+  mutate(male = ifelse(V241==1, 1, 0), 
+         age = V242, 
+         edu = ifelse(V244==0 | V244==1 | V244==2,1,  # 0: 중졸미만, 1 중졸, 2. 고졸, 3, 전문대졸, 4, 대졸, 5, 대학원 졸
+                       ifelse(V244==3, 2,
+                                     ifelse(V244==4, 3,
+                                                ifelse(V244==5, 4,
+                                                       ifelse(V244==6| V244==7, 5, 0))))),
+         degree = ifelse(V245==1, 1,
+                     ifelse(V245==2 | V245==3 | V245==4 |  V245 ==5, 2, NA)),
+         edu = replace(edu, edu==2 & degree!=1, 1),
+         edu = replace(edu, edu==3 & degree!=1, 2),
+         edu = replace(edu, edu==4 & degree!=1, 3),
+         edu = replace(edu, edu==5 & degree!=1, 4),
+         spouse = ifelse(V280==120, 1, 0), # 1: 배우자 있음
+         employed = ifelse(V282==150, 1, 0),
+         income = ifelse(V290==7 & V291==670, 7,
+                         ifelse(V290==7 & V292 ==690, 8,
+                                ifelse(V290==7 & V292==700, 9, V290))),
+
+         prepared = V144                         ) %>%
+  rename(education = edu,
+         satis = V4,
+         health = V19
+         ) %>%
+  dplyr::select(id, male, spouse, age, education, employed, income, satis, health, prepared)
+
+
+df<- readRDS("df_final.RDS")
+df <- left_join(df, mdis, by="id")
+```
+```{r}
+# Goal: Estimate 2nd stage model (1000 times, each using a different sample from types' distribution)
+# Dependencies: "datamodel.Rdata", "samples_stage1.Rdata", "stage2.bug"
+
+# setwd("~/Replication Package")
+
+library(rjags)
+library(coda)
+load.module("glm")
+
+library(foreach)
+library(doMC)  
+registerDoMC(12) 
+
+RNGkind("L'Ecuyer-CMRG")
+
+set.seed(20000)
+
+
+load("samples_final1_2.Rdata")
+
+nat.type.samples <- rbind(samples.final1_2[[1]][ , substr(colnames(samples.final1_2[[1]]), 1, 4) == "nat."], samples.final1_2[[2]][ , substr(colnames(samples.final1_2[[2]]), 1, 4) == "nat."], samples.final1_2[[3]][ , substr(colnames(samples.final1_2[[3]]), 1, 4) == "nat."])
+
+hu.type.samples <- rbind(samples.final1_2[[1]][ , substr(colnames(samples.final1_2[[1]]), 1, 2) == "hu"], samples.final1_2[[2]][ , substr(colnames(samples.final1_2[[2]]), 1, 2) == "hu"], samples.final1_2[[3]][ , substr(colnames(samples.final1_2[[3]]), 1, 2) == "hu"])
+
+N.draws <- 100 # NUMBER OF DRAWS FROM TYPE DISTRIBUTION
+
+tosample <- matrix(sample(1:300, N.draws * dim(nat.type.samples)[2], replace = T), ncol = dim(nat.type.samples)[2])
+
+nat.type.smallsamples <- matrix(NA, ncol = dim(nat.type.samples)[2], nrow = N.draws)
+hu.type.smallsamples <- matrix(NA, ncol = dim(hu.type.samples)[2], nrow = N.draws)
+
+for (i in 1:dim(nat.type.samples)[2]) {
+    nat.type.smallsamples[ , i] <- nat.type.samples[tosample[ , i], i] - 1
+    hu.type.smallsamples[ , i] <- hu.type.samples[tosample[ , i], i] - 1
+  }
+
+
+##---------- ESTIMATE 2-STAGE MODEL ----------##
+
+
+ncells <- 4
+
+nvar <- 10
+
+b0 <- rep(0, nvar)
+B0 <- diag(nvar) * 0.01
+
+
+samples.stage2_1.J1000 <- foreach(j = 1:N.draws) %dopar% {
+  
+  nat.type <- nat.type.smallsamples[j, ]
+  hu.type <- hu.type.smallsamples[j, ]
+  
+  typeComb <- NULL
+  typeComb[nat.type == 0 & hu.type == 0] <- 1
+  typeComb[nat.type == 0 & hu.type == 1] <- 2
+  typeComb[nat.type == 1 & hu.type == 0] <- 3
+  typeComb[nat.type == 1 & hu.type == 1] <- 4
+  
+  df2 <- data.frame("typeComb" = typeComb, "male" = df$male, "spouse" = df$spouse, "age" = df$age, "education" = df$education, "employed" = df$employed, "income" = df$income, "satis" = df$satis, "health" = df$health, "prepared" = df$prepared)
+
+
+  # Standardize covariates
+  df2[, 2:10] <- scale(df2[, 2:10])
+
+  n <- dim(df2)[1]
+  
+  data2.jags  <- list("n" = n, "ncells" = ncells, "nvar" = nvar, "b0"= b0, "B0"= B0, "typeComb" = df2$typeComb, "male" = df2$male, "spouse" = df2$spouse, "age" = df2$age, "education" = df2$education, "employed" = df2$employed, "income" = df2$income, "satis" = df2$satis, "health" = df2$health, "prepared" = df2$prepared)
+  
+  parameters2.jags<-c("beta")
+  
+  inits.jags <- list(list(.RNG.seed = sample(1:10000, 1), .RNG.name = "base::Mersenne-Twister"))
+
+  model2.jags <- jags.model("final2_2.bug", data = data2.jags, inits = inits.jags, n.chains = 1, n.adapt = 2000)
+  
+  mcmc.samples.final2_2 <- coda.samples(model2.jags, variable.names = parameters2.jags, n.iter = 2000, thin = 20)
+  
+  mcmc.samples.final2_2[[1]]
+  
+}
+
+save(samples.stage2_1.J1000, file = "samples_stage2_1_J1000.Rdata")
+
+
+# Goal: Make Figure B1
+# Dependencies: "samples_stage2_J1000.Rdata"
+
+# setwd("~/Replication Package")
+
+library(coda)
+
+# load("samples_stage2_1_J1000.Rdata")
+```
+
+
+```{r}
+samples.stage2_1 <- as.mcmc.list(samples.stage2_1.J1000)
+
+coef.samples <- samples.stage2_1[ , substr(names(samples.stage2_1[[1]][1,]), 1, 6) != "beta[1"]
+
+N.samples <- c(1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50)
+
+set.seed(1000)
+
+seeds.vector <- sample(1:100, 10)
+
+avg.sd <- NULL
+avg.width <- NULL
+
+for (k in 1:length(seeds.vector)) {
+
+  set.seed(seeds.vector[k])
+
+  coef.subsamples <- list()
+
+  for (i in 1:length(N.samples)) {
+    samples.IDs  <- sample(1:100, N.samples[i])
+    coef.subsample <- NULL 
+    for (j in 1:length(samples.IDs)) {
+      coef.subsample <- rbind(coef.subsample, coef.samples[[samples.IDs[j]]])
+    }
+    coef.subsamples[[i]] <- coef.subsample
+  }
+
+  avg.sd <- cbind(avg.sd, unlist(lapply(coef.subsamples, function(x) mean(apply(x, 2, sd)))))
+  avg.width <- cbind(avg.width, unlist(lapply(coef.subsamples, function(x) mean(apply(x, 2, quantile, p = 0.975) - apply(x, 2, quantile, p = 0.025)))))
+
+  print(k)
+
+}
+
+averages <- list(avg.sd, avg.width)
+
+##-------- FIGURE B1 --------##
+
+jpeg("FigureB1.png", width = 500, height = 700)
+
+par(mfrow =  c(2, 1)) 
+par(oma =  c(4, 4, 0, 4), mar = c(0, 0, 6, 0)) 
+
+plot.ts(avg.width, plot.type = "single", axes = F, ann = F, ylab = "Avg. s.d.", xlab = "J", col = "gray26", type = "p")
+lines(apply(avg.width, 1, mean), lwd = 3)
+axis(2)
+axis(1, labels = N.samples, at = 1:length(N.samples))
+mtext("Average s.d.", at = 6, line = 1, cex = 0.9)
+mtext("J", side = 1, line = 2, cex.lab = 1, col = "black")
+
+plot.ts(avg.sd, plot.type = "single", axes = F, ann = F, ylab = "Avg. c.i. width", xlab = "J", col = "gray26", type = "p")
+lines(apply(avg.sd, 1, mean), lwd = 3)
+axis(2)
+axis(1, labels = N.samples, at = 1:length(N.samples))
+mtext("Average width", at = 6, line = 1, cex = 0.9)
+mtext("J", side = 1, line = 2, cex.lab = 1, col = "black")
+
+dev.off()
+
+```
+
