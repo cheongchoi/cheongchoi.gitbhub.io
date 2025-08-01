@@ -89,6 +89,66 @@
                     <div class="row panel_data_mthd_row gx-3 gy-4">
                         <div class="col-md-6 col-lg-4 panel_data_mthd_col">
                             <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Organizational Commitment Dynamics</h4>
+                                <figure class="main_imgg">
+                                    <img src="fig02_raw_curves.jpeg" alt="Organizational Commitment Dynamics" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Organizational Commitment Dynamics</code>
+                                    지난 20년간 조직몰입의 동태를 살펴보면 다음과 같다. 첫째, 좌측 패널은 2023년 현재 연령별 조직몰입의 수준을 나타내는 것이다.
+                                    대체로 연령이 높아질 수록 조직몰입은 낮아진다. 둘째, 중간 패널은 5개 조사년도(2003년, 2008년, 2013년, 2018년, 2023년)별로 연령별 조직몰입의 변화를 나타낸 것이다. 
+                                    조사년도가 지날 수록 조직몰입은 전체적으로 높아지는 것을 알 수 있다. 또한, 연령이 높아질 수록 조직몰입은 낮아지는 현상을 볼 수 있다. 은 다양한 요인에 의해 영향을 받는다. 여기서는 연령, 공사부문, 정규직 비정규직, 조사년도를 공변량으로 선정하여 Bayesian 기법을 통해 모수를 추정하였다.
+                                    셋째, 우측 패널은 생년별로 조사연도에 따른 조직몰입의 변화를 살펴볼 수 있다. 생년이 늦을 수록 조직몰입은 높아진다. 이는 연령이 높아질 수록 조직몰입이 
+                                    낮아지는 것과 같은 현상이다. 아울로, 조사연도가 지날 수록 조직몰입은 전체적으로 높아지는 현상을 다시 확인할 수 있다.
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="getSei.R" target="_blank" >
+                                                <span>getSei.R</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                                                                                             
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                         
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
+                                <h4 class="hdng">Organizational Commitment</h4>
+                                <figure class="main_imgg">
+                                    <img src="orgcom_permanent.png" alt="Organizational Commitment" width="100%">
+                                </figure>
+                                    <p>
+                                    <code>Organizational Commitment</code>
+                                    조직몰입은 다양한 요인에 의해 영향을 받는다. 여기서는 연령, 공사부문, 정규직 비정규직, 조사년도를 공변량으로 선정하여 Bayesian 기법을 통해 모수를 추정하였다.
+                                    모수 추정이후에는 모수에 대한 사후확률분포를 바탕으로  MCMC 방법으로 Sampling 하였다. 다시 연령을 30세, 45세, 60세로 고정시키고, 공사부문을 공공부문과 민간부분으로 고정시키며,
+                                    정규직 여부를 정규직과 비정규직으로 고정시키고, 조사년도를 2023년도로 고정시켜서 시뮬레이션 하였다. 그 결과는 첨부한 그림과 같다.
+                                    결국, 공공부문 정규직 30세의 조직몰입도 기대값이 가장 높았고, 그 다음으로 공공부문 비정규직과 민간부문 정규직은 비슷한 수준을 보인다. 마지막으로, 민간부문 비정규직이 
+                                    가장 낮은 조직몰입도를 보인다. 남녀간에는 차이가 없다. 
+                                </p>
+                                <div class="tag_part_cmmmn">                                    
+                                    <ul>                                                                         
+                                        <li>
+                                            <a href="getSei.R" target="_blank" >
+                                                <span>getSei.R</span>
+                                            </a>
+                                        </li>                                        
+                                        <li>
+                                            <a href="" target="_blank" >
+                                                <span>paper</span>
+                                            </a>
+                                        </li>                                                                                                                                                             
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>                          
+                        <div class="col-md-6 col-lg-4 panel_data_mthd_col">
+                            <div class="panel_data_mthd_col_inner">
                                 <h4 class="hdng">Age Distribution by Occupations </h4>
                                 <figure class="main_imgg">
                                     <img src="plotincagecat3.png" alt="Age Distribution" width="100%">
