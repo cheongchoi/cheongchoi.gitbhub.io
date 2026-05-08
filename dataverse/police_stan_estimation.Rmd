@@ -1,0 +1,504 @@
+---
+title: "police_stan_estimation"
+author: "Cheon Geun Choi"
+date: "2025-12-28"
+output: html_document
+---
+
+```{r}
+# install.packages(c('MASS','arm','dplyr','tidyr','ggplot2','RColorBrewer','rstan','loo'))
+rm(list=ls())
+gc()
+library(MASS)
+library(arm)
+library(dplyr)
+library(tidyr)
+library(rstan)
+library(loo)
+library(ggplot2)
+library(tidyverse)
+library(RColorBrewer)
+library(countrycode)
+library(panelView)
+
+# options
+#rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+
+# working directory
+WD = rstudioapi::getActiveDocumentContext()$path 
+setwd(dirname(WD))
+print( getwd() )
+
+```
+
+
+
+```{r}
+# iterations
+n.iter = 2000
+n.warm = 500
+n.chn = 4
+n.thin = 1
+
+
+dat.2 <- readRDS("data/inst_dat.2.rds")
+pars.5 <- readRDS("data/inst_pars.5.rds")
+
+stan.mod.5 = stan(file='trust.stan.mod5.stan', data=dat.2, pars=pars.5, 
+                  iter=n.iter, warmup=n.warm, chains=n.chn, thin=n.thin, 
+                  control=list(adapt_delta=0.99, stepsize=0.02, max_treedepth=11))
+
+saveRDS(stan.mod.5, "result/inst_stan.mod.5.rds")
+stan.mod.5 <- readRDS("result/inst_stan.mod.5.rds")
+
+rm(list=ls())
+```
+
+
+```{r}
+n.iter = 2000
+n.warm = 500
+n.chn = 4
+n.thin = 1
+
+dat.2 <- readRDS("data/inst_dat.2.rds")
+pars.6 <- readRDS("data/inst_pars.6.rds")
+
+
+# model 6 with item slopes
+stan.mod.6 = stan(file='trust.stan.mod6.2.stan', data=dat.2, pars=pars.6, 
+                  iter=n.iter, warmup=n.warm, chains=n.chn, thin=n.thin, 
+                  control=list(adapt_delta=0.99, stepsize=0.01, max_treedepth=13))
+
+saveRDS(stan.mod.6, "result/inst_stan.mod.6.rds")
+stan.mod.6 <- readRDS("result/inst_stan.mod.6.rds")
+
+rm(list=ls())
+
+# iterations
+n.iter = 2000
+n.warm = 500
+n.chn = 4
+n.thin = 1
+
+
+dat.2 <- readRDS("data/inst_dat.2.rds")
+pars.5 <- readRDS("data/inst_pars.5.rds")
+
+stan.mod.5.2 = stan(file='trust.stan.mod5.2.stan', data=dat.2, pars=pars.5, 
+                  iter=n.iter, warmup=n.warm, chains=n.chn, thin=n.thin, 
+                  control=list(adapt_delta=0.99, stepsize=0.02, max_treedepth=11))
+
+saveRDS(stan.mod.5.2, "result/inst_stan.mod.5.2.rds")
+stan.mod.5.2 <- readRDS("result/inst_stan.mod.5.2.rds")
+
+rm(list=ls())
+```
+
+
+
+
+```{r}
+# best model from PA article (model 5)
+
+dat.2 <- readRDS("data/inst_dat.2.rds")
+pars.5 <- readRDS("data/inst_pars.5.rds")
+
+stan.mod.5 <- readRDS("result/inst_stan.mod.5.rds")
+```
+
+
+```{r}
+#### Model fit plots
+
+
+# traceplot
+
+tiff("image/figure_S2B.tiff", width = 10, height = 4, units = "in", res= 300)
+# pdf("figure_S2B.pdf", width=10, height=4)
+rstan::traceplot(stan.mod.5, ncol=5, nrow=2, alpha=0.8, size=0.3,  
+                 pars=c("mu_lambda","sigma_lambda","sigma_theta","sigma_delta","phi","lambda[2]",
+                        "delta[93]","theta[21,66]","theta[16,49]","theta[16,94]"))
+dev.off()
+
+
+# R-hat plot
+
+tiff("image/figure_S2A.tiff", width = 4, height = 4, units = "in", res= 300)
+# pdf("figure_S2A.pdf", height=4, width=4)
+stan_rhat(stan.mod.5)
+dev.off()
+
+
+#### Extract theta estimates
+trust2 <- readRDS(file="data/inst_trust2_2.RDS")
+# saveRDS(ptrust.ctry, file="data/ptrust.ctry.RDS")
+ptrust.ctry <- readRDS(file="data/ptrust.ctry.RDS")
+
+# trust3 <- trust2[trust2$Country %in% ptrust.ctry,]
+trust3 <- trust2 %>%
+  mutate(Year=Year-9) %>%
+  filter(Country %in% ptrust.ctry & str_like(Item, "Police%")) %>%
+  filter(Year>0 & Year < 36)
+
+table(trust3$Country)
+table(trust3$Project)
+table(trust3$Item)
+# count data
+dim(trust3)[1]                   # 2377 national responses
+length(unique(trust3$Country))   # 126 countries
+length(unique(trust3$Project))   # 16 projects
+length(unique(trust3$Item))      # 16 items
+length(unique(trust3$ItemCnt))   # 370 item-country
+length(unique(trust3$YrProjCnt)) # 2357 national surveys
+length(unique(trust3$Year))      # 34 unique years (out of 30)
+sum(trust3$Sample) / dim(trust3)[1] * length(unique(trust3$YrProjCnt))   # 3,500,075 respondents              
+
+table(trust3$Item)
+trust3$Item <- as.factor(as.character(trust3$Item))
+
+table(trust3$Item)
+
+str(trust3$Item)
+levels(trust3$Item)
+
+# drop countries with less than 2 years of data
+cnt.obs.years = rowSums(table(trust3$Country, trust3$Year) > 0)
+sort(cnt.obs.years)
+length(unique(trust3$Country))   # 146 countries with 2+ years of data
+
+
+# prepare data for stan
+year0 <- 1989
+trust3$Item
+n.items = length(unique(trust3$Item))
+n.cntrys = length(unique(trust3$Country))
+n.yrs = 2024-year0
+n.proj = length(unique(trust3$Project))
+n.resp = dim(trust3)[1]
+n.itm.cnt = length(unique(trust3$ItemCnt))
+n.cntry.yrs = n.cntrys * n.yrs
+n.yr.proj.cnt = length(unique(trust3$YrProjCnt))
+cntrys = as.numeric(factor(trust3$Country))
+cnt.names = as.character(sort(unique(trust3$Country)))
+cnt.code = as.character(trust3[match(cnt.names, trust3$Country), "CAbb"])
+items = as.numeric(factor(trust3$Item))
+items
+yrs = trust3$Year
+projs = as.numeric(factor(trust3$Project))
+itm.cnts = as.numeric(factor(trust3$ItemCnt))
+
+
+
+theta.out = rstan::extract(stan.mod.5, pars = c("theta"))[[1]]
+theta.std = (theta.out - mean(as.vector(theta.out))) / sd(as.vector(theta.out)) # standardize
+theta.out.t = apply( theta.std, 1, function(x) t(x) )
+theta.out.df = data.frame(Country=rep(cnt.names, length.out=n.cntrys*35), 
+                          ISO_code=rep(cnt.code, length.out=n.cntrys*35),
+                          Year=rep(1990:2024, each=n.cntrys), theta.out.t)
+theta.pe = theta.out.df[,1:3]
+theta.dim = dim(theta.out.df)[2]
+theta.pe$SupDem_trim = apply(theta.out.df[,4:theta.dim], 1, mean)
+theta.pe$SupDem_u90 = apply(theta.out.df[,4:theta.dim], 1, quantile, probs=c(0.95))
+theta.pe$SupDem_l90 = apply(theta.out.df[,4:theta.dim], 1, quantile, probs=c(0.05))
+
+first.yr = data.frame(Country=levels(trust3$Country),
+                      First_yr = as.vector(by(trust3, trust3$Country, function(x) min(as.numeric(x$Year))+1989)))
+
+theta.pe = merge(theta.pe, first.yr, by="Country", all.x=TRUE)
+cnts = theta.pe[theta.pe$Year==2018, "Country"]
+frst.yr = theta.pe[theta.pe$Year==2018, "First_yr"]
+for(i in 1:length(cnts)) {
+  theta.pe[theta.pe$Country==cnts[i] & theta.pe$Year<frst.yr[i], "SupDem_trim"] = NA
+  theta.pe[theta.pe$Country==cnts[i] & theta.pe$Year<frst.yr[i], "SupDem_u90"] = NA
+  theta.pe[theta.pe$Country==cnts[i] & theta.pe$Year<frst.yr[i], "SupDem_l90"] = NA
+}
+
+# write.csv(theta.pe, "inst_stan_est_sup_dem_m5.csv", row.names=FALSE)
+saveRDS(theta.pe, file = "result/inst_theta.pe2.RDS")
+
+#### Plots of model fit
+
+
+x.sim = rstan::extract(stan.mod.5, pars=c("x_pred"))[[1]]
+x.sim.pe = apply(x.sim, 2, mean, na.rm=TRUE) / trust3$Sample
+x.sim.err = trust3$Response/trust3$Sample - x.sim.pe
+
+## plot posterior predicted fit 
+summary(trust3$Response)
+summary(x.sim.pe*trust3$Sample)
+
+tiff("image/figure_S3A.tiff", width = 5, height = 5, units = "in", res= 300)
+# pdf('figure_S3A.pdf', width=5, height=5)
+par(mfrow=c(1,1), mar=c(2.5,3,.5,.5), tcl=-0.2, las=1)
+plot(y=trust3$Response, x=x.sim.pe*trust3$Sample, type="n", xlab="", ylab="", axes=FALSE, xaxs="i", yaxs="i", main="", 
+     xlim=c(0,2000), ylim=c(0,2000))
+abline(a=0, b=1, lty=2, col="black")
+axis(side=1, tick=TRUE, mgp=c(1,0.15,0), cex.axis=0.8)
+axis(side=2, tick=TRUE, mgp=c(1,0.4,0), cex.axis=0.8)
+grid()
+points(y=trust3$Response, x=x.sim.pe*trust3$Sample, pch=16, cex=0.6, col=rgb(0,0,0,.3))
+lines(lowess(y=trust3$Response, x=x.sim.pe*trust3$Sample), col=rgb(0,0,0.5,1), lwd=2)
+mtext(side=1, line=1.2, at=1000, "Observed response counts", cex=1)
+mtext(side=2, line=2, at=1000, "Simulated response counts", cex=1, las=0)
+box()
+dev.off()
+
+tiff("image/figure_S3B.tiff", width = 5, height = 5, units = "in", res= 300)
+# pdf('figure_S3B.pdf', width=5, height=5)
+par(mfrow=c(1,1), mar=c(2.5,3,.5,.5), tcl=-0.2, las=1)
+plot(y=trust3$Response/trust3$Sample, x=x.sim.pe, type="n", xlab="", ylab="", axes=FALSE, xaxs="i", yaxs="i", main="", 
+     xlim=c(0,1), ylim=c(0,1))
+abline(a=0, b=1, lty=2, col="black")
+axis(side=1, tick=TRUE, mgp=c(1,0.15,0), cex.axis=0.8)
+axis(side=2, tick=TRUE, mgp=c(1,0.4,0), cex.axis=0.8)
+grid()
+points(y=trust3$Response/trust3$Sample, x=x.sim.pe, pch=16, cex=0.6, col=rgb(0,0,0,.3))
+lines(lowess(y=trust3$Response/trust3$Sample, x=x.sim.pe), col=rgb(0,0,0.5,1), lwd=2)
+mtext(side=1, line=1.2, at=0.5, "Observed response proportions", cex=1)
+mtext(side=2, line=2, at=0.5, "Simulated response proportions", cex=1, las=0)
+box()
+dev.off()
+
+
+tiff("image/figure_S3C.tiff", width = 5, height = 5, units = "in", res= 300)
+# pdf("figure_S3C.pdf", width=5, height=5)
+par(mfrow=c(1,1), mar=c(2.5, 2, 1, .5), tcl=-0.2, las=1)
+plot(density(trust3$Response/trust3$Sample), type="n", axes=FALSE, xlim=c(0,1), ylim=c(0,3), xaxs="i", yaxs="i", main="")
+axis(side=1, tick=TRUE, mgp=c(1,0.15,0), cex.axis=0.8)
+axis(side=2, tick=TRUE, mgp=c(1,0.4,0), cex.axis=0.8)
+grid()
+lines(density(trust3$Response/trust3$Sample), lwd=3, col="black")
+polygon(density(trust3$Response/trust3$Sample), col=rgb(0,0,0,0.7))
+lines(density(x.sim.pe), lwd=3, col=rgb(0,0,.5,1))
+polygon(density(x.sim.pe), col=rgb(0,0,.5,.4))
+mtext(side=1, line=1.2, at=0.5, "Response proportions", cex=1)
+legend("topleft", lwd=3, col=c(rgb(0,0,0,1), rgb(0,0,.5,1)), c("Observed", "Simulated"), cex=0.9, bty="n")
+box()
+dev.off()
+
+
+
+
+# Figure S8. Time Series Plots of Satisfaction with Democracy, by Region
+
+library(countrycode)
+
+vars = c("SupDem_trim")
+theta.pe_trim <- theta.pe %>%
+  filter(Year > 1989)
+
+theta.pe_trim$Region_VD <- countrycode(theta.pe_trim$Country, origin = 'country.name', destination = 'region')
+theta.pe_trim$Region_VD2 <- countrycode(theta.pe_trim$Country, origin = 'country.name', destination = 'un.region.name')
+theta.pe_trim$Region_VD2[theta.pe_trim$Country == "Kosovo"] <- "Europe"
+theta.pe_trim$Region_VD2[theta.pe_trim$Country == "Northern Ireland"] <- "Europe"
+theta.pe_trim$Region_VD2[theta.pe_trim$Country == "Taiwan"] <- "Asia"
+theta.pe_trim$Region_VD2[theta.pe_trim$Country == "Australia"] <- "Asia"
+theta.pe_trim$Region_VD2[theta.pe_trim$Region_VD2 == "Asia and Oceania"] <- "Asia & Oceania"
+
+table(theta.pe_trim$Region_VD2)
+sum(is.na(theta.pe_trim$Region_VD2))
+
+
+theta.pe_trim$Region_VD2 = factor(theta.pe_trim$Region_VD2, labels=
+                                    c("Africa", "Americas", "Asia & Oceania", "Europe"))
+
+regs = levels(theta.pe_trim$Region_VD2)
+pal = brewer.pal(12, "Set3")
+regs
+table(theta.pe_trim$Year,theta.pe_trim$Country )
+table(theta.pe_trim$Year)
+summary(theta.pe_trim$SupDem_trim)
+theta.pe_trim <- theta.pe_trim %>%
+  arrange(Country, Year)
+
+unique(theta.pe_trim[theta.pe_trim$Region_VD2==regs[4], "Country"])
+
+tiff("image/figure_police.tiff", width = 6, height = 4, units = "in", res= 300)
+par(mfrow=c(2,2), mar=c(1.2, 1.6, 1.6, 1.2), tcl=-0.2, cex=1)
+for (i in 1:4) {
+  plot(y=rep(0, 35), x=1990:2024, type="n", xlab="", ylab="", ylim=c(-2.5,3), xlim=c(1989,2025), xaxs="i",
+       xaxt="n", yaxt="n", main="", bty="n")
+  abline(h=c(-2,0,2), lty=3, lwd=.75, col=rgb(0,0,0,0.3))
+  abline(v=c(1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025), lty=3, lwd=1, col=rgb(0,0,0,0.3))
+  cnts = unique(theta.pe_trim[theta.pe_trim$Region_VD2==regs[i], "Country"])
+  for (j in 1:length(cnts)) {
+    lines(y=theta.pe_trim[theta.pe_trim$Country==cnts[j], "SupDem_trim"][1:35], x=1990:2024, col=rgb(0,0,0,.35), lwd=1.2, lty=1)
+  }
+  lines(y=as.numeric(by(theta.pe_trim[theta.pe_trim$Region_VD2==regs[i], "SupDem_trim"],
+                        theta.pe_trim[theta.pe_trim$Region_VD2==regs[i], "Year"], mean, na.rm=TRUE))[1:35],
+        x=1990:2024, col="black", lwd=2.8, lty=1)
+  lines(y=theta.pe_trim[theta.pe_trim$Country=="South Korea", "SupDem_trim"][1:35], x=1990:2024, col="red", lwd=2.8, lty=1)
+  axis(1, at=c(1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025), cex.axis=.65, mgp=c(1,.07,0), lwd=0.8)
+  axis(2, at=c(-2, 0, 2), cex.axis=.65, mgp=c(1.4,.32,0), las=1, lwd=0.8)
+  mtext(regs[i], side=3, line=0.18, cex=1.0)
+  mtext("Trust in Police", side=2, line=0.80, las=0, cex=0.85)
+  box(lwd=0.75)
+}
+dev.off()
+```
+
+
+```{r}
+# 국가별 2024년 경찰신뢰지수 
+trust3  <- readRDS(file = "data/inst_trust3.rds")
+
+theta.pe  <- readRDS(file = "result/inst_theta.pe2.RDS")
+trust4 <- trust3 %>%  mutate(Prop = Response/Sample)
+trust4 <- trust4[order(trust4$Country, trust4$Year),]
+theta.pe.rank <- theta.pe %>%
+  mutate(trust = quantile(trust4$Prop, probs = pnorm(SupDem_trim))) %>%
+  group_by(Country) %>%
+  summarise(trust_sim_mean = mean(trust, na.rm = TRUE)) %>%
+  mutate(trust_sim_rank = rank(-trust_sim_mean ))
+```
+
+
+```{r}
+
+
+trust4.rank <- trust4 %>%
+  group_by(Country) %>%
+  summarise(trust_obs_mean = mean(Prop, na.rm = TRUE)) %>%
+  mutate(trust_obs_rank = rank(-trust_obs_mean ))
+
+rank <- left_join(trust4.rank, theta.pe.rank)
+
+# Calculate the density estimate
+theta.pe.scale <- theta.pe %>%
+  filter(Year == 2024 | Year == 2014 | Year == 2004 | Year == 1994) %>%
+  select(-c(ISO_code))
+
+theta.pe.scale.w <- pivot_wider(theta.pe.scale, id_cols = "Country", names_from = "Year", values_from = c("SupDem_trim", "SupDem_u90", "SupDem_l90"), names_sort = TRUE) %>%
+  select(c(Country, SupDem_trim_1994, SupDem_u90_1994, SupDem_l90_1994,
+           SupDem_trim_2004, SupDem_u90_2004, SupDem_l90_2004, 
+           SupDem_trim_2014, SupDem_u90_2014, SupDem_l90_2014, 
+           SupDem_trim_2024, SupDem_u90_2024, SupDem_l90_2024))
+
+theta.pe.scale.w$trust_1994 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_trim_1994))
+theta.pe.scale.w$trust_u90_1994 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_u90_1994))
+theta.pe.scale.w$trust_l90_1994 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_l90_1994))
+
+theta.pe.scale.w$trust_2004 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_trim_2004))
+theta.pe.scale.w$trust_u90_2004 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_u90_2004))
+theta.pe.scale.w$trust_l90_2004 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_l90_2004))
+
+theta.pe.scale.w$trust_2014 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_trim_2014))
+theta.pe.scale.w$trust_u90_2014 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_u90_2014))
+theta.pe.scale.w$trust_l90_2014 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_l90_2014))
+
+theta.pe.scale.w$trust_2024 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_trim_2024))
+theta.pe.scale.w$trust_u90_2024 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_u90_2024))
+theta.pe.scale.w$trust_l90_2024 <-quantile(trust4$Prop, probs = pnorm(theta.pe.scale.w$SupDem_l90_2024))
+
+rankdf <- left_join(rank, theta.pe.scale.w)
+
+write.csv(rankdf, "result/pol_trust_rankdf.csv", row.names=FALSE)
+saveRDS(rankdf, file = "result/rankdf.RDS")
+
+
+trust4 %>%
+  filter(Country == "Japan") %>%
+  select(c(Year, Item, Prop)) %>%
+  print(n = 50)
+
+```
+```{r}
+trust3[abs((trust3$Response/trust3$Sample) - x.sim.pe) > 0.15, ] %>%
+  select(c(Country, Project, YrProj, Response, Sample))
+trust3[trust3$Project=="lits" & trust3$Year == 21, ]  %>%
+  select(c(Country, Project, YrProj, ItemCnt, Response, Sample)) %>%
+  print(n=500)
+```
+
+# 한국연구재단 중견연구 일반 <그림 1>
+
+```{r}
+# install.packages(c('MASS','arm','dplyr','tidyr','ggplot2','RColorBrewer','rstan','loo'))
+rm(list=ls())
+gc()
+library(MASS)
+library(arm)
+library(dplyr)
+library(tidyr)
+library(rstan)
+library(loo)
+library(ggplot2)
+library(tidyverse)
+library(RColorBrewer)
+library(countrycode)
+library(panelView)
+
+# options
+#rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+
+# working directory
+WD = rstudioapi::getActiveDocumentContext()$path 
+setwd(dirname(WD))
+print( getwd() )
+
+# Figure S8. Time Series Plots of Satisfaction with Democracy, by Region
+theta.pe <- readRDS(file = "result/inst_theta.pe2.RDS")
+
+library(countrycode)
+
+vars = c("SupDem_trim")
+theta.pe_trim <- theta.pe %>%
+  filter(Year > 1989)
+
+theta.pe_trim$Region_VD <- countrycode(theta.pe_trim$Country, origin = 'country.name', destination = 'region')
+theta.pe_trim$Region_VD2 <- countrycode(theta.pe_trim$Country, origin = 'country.name', destination = 'un.region.name')
+theta.pe_trim$Region_VD2[theta.pe_trim$Country == "Kosovo"] <- "Europe"
+theta.pe_trim$Region_VD2[theta.pe_trim$Country == "Northern Ireland"] <- "Europe"
+theta.pe_trim$Region_VD2[theta.pe_trim$Country == "Taiwan"] <- "Asia"
+theta.pe_trim$Region_VD2[theta.pe_trim$Country == "Australia"] <- "Asia"
+theta.pe_trim$Region_VD2[theta.pe_trim$Region_VD2 == "Asia and Oceania"] <- "Asia & Oceania"
+
+table(theta.pe_trim$Region_VD2)
+sum(is.na(theta.pe_trim$Region_VD2))
+
+
+theta.pe_trim$Region_VD2 = factor(theta.pe_trim$Region_VD2, labels=
+                                    c("Africa", "Americas", "Asia & Oceania", "Europe"))
+
+regs = levels(theta.pe_trim$Region_VD2)
+pal = brewer.pal(12, "Set3")
+regs
+table(theta.pe_trim$Year,theta.pe_trim$Country )
+table(theta.pe_trim$Year)
+summary(theta.pe_trim$SupDem_trim)
+theta.pe_trim <- theta.pe_trim %>%
+  arrange(Country, Year)
+
+unique(theta.pe_trim[theta.pe_trim$Region_VD2==regs[4], "Country"])
+
+tiff("image/figure_NRF_police_.tiff", width = 6, height = 4, units = "in", res= 300)
+par(mfrow=c(2,2), mar=c(1.2, 1.6, 1.6, 1.2), tcl=-0.2, cex=1)
+for (i in 1:4) {
+  plot(y=rep(0, 35), x=1990:2024, type="n", xlab="", ylab="", ylim=c(-2.5,3), xlim=c(1989,2025), xaxs="i",
+       xaxt="n", yaxt="n", main="", bty="n")
+  abline(h=c(-2,0,2), lty=3, lwd=.75, col=rgb(0,0,0,0.3))
+  abline(v=c(1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025), lty=3, lwd=1, col=rgb(0,0,0,0.3))
+  cnts = unique(theta.pe_trim[theta.pe_trim$Region_VD2==regs[i], "Country"])
+  for (j in 1:length(cnts)) {
+    lines(y=theta.pe_trim[theta.pe_trim$Country==cnts[j], "SupDem_trim"][1:35], x=1990:2024, col=rgb(0,0,0,.35), lwd=1.2, lty=1)
+  }
+  lines(y=as.numeric(by(theta.pe_trim[theta.pe_trim$Region_VD2==regs[i], "SupDem_trim"],
+                        theta.pe_trim[theta.pe_trim$Region_VD2==regs[i], "Year"], mean, na.rm=TRUE))[1:35],
+        x=1990:2024, col="black", lwd=2.8, lty=1)
+  lines(y=theta.pe_trim[theta.pe_trim$Country=="South Korea", "SupDem_trim"][1:35], x=1990:2024, col="red", lwd=2.8, lty=1)
+    lines(y=theta.pe_trim[theta.pe_trim$Country=="Australia", "SupDem_trim"][1:35], x=1990:2024, col="blue", lwd=2.8, lty=1)
+
+  axis(1, at=c(1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025), cex.axis=.65, mgp=c(1,.07,0), lwd=0.8)
+  axis(2, at=c(-2, 0, 2), cex.axis=.65, mgp=c(1.4,.32,0), las=1, lwd=0.8)
+  mtext(regs[i], side=3, line=0.18, cex=1.0)
+  mtext("Trust in Police", side=2, line=0.80, las=0, cex=0.85)
+  box(lwd=0.75)
+}
+dev.off()
+
+```
+
+
